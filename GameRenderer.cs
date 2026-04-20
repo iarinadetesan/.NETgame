@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Silk.NET.Maths;
 using Silk.NET.SDL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -82,7 +83,9 @@ public class GameRenderer
         {
             timeSinceLastFrame = (int)now.Subtract(_lastFrameRenderedAt).TotalMilliseconds;
         }
-
+        
+        _gameLogic.RenderTerrain(this); //intai randam terenul, ca background!
+        
         _gameLogic.RenderAllObjects(timeSinceLastFrame, this);
         _lastFrameRenderedAt = now;
         
@@ -106,6 +109,15 @@ public class GameRenderer
                 new Silk.NET.SDL.Point(0, 0),
                 RendererFlip.None
             );
+        }
+    }
+    
+    
+    public unsafe void RenderTexture(int textureId, Rectangle<int> src, Rectangle<int> dst)
+    {
+        if (_texturePointers.TryGetValue(textureId, out var texture))
+        {
+            _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in dst);
         }
     }
 }
