@@ -5,9 +5,13 @@ namespace TheAdventure;
 public class InputLogic
 {
     private readonly Sdl _sdl;
-    public InputLogic(Sdl sdl)
+    private readonly GameLogic _gameLogic;
+    private int mouseX;
+    private int mouseY;
+    public InputLogic(Sdl sdl, GameLogic gameLogic)
     {
         _sdl = sdl;
+        _gameLogic = gameLogic;
     }
     public unsafe bool ProcessInput()
     {
@@ -95,9 +99,12 @@ public class InputLogic
                     }
                     case (uint)EventType.Mousebuttondown:
                     {
+                        mouseX = ev.Motion.X;
+                        mouseY = ev.Motion.Y;
                         mouseButtonStates[ev.Button.Button] = 1;
                         break;
                     }
+
 
                     case (uint)EventType.Fingerup:
                     {
@@ -127,7 +134,11 @@ public class InputLogic
                         break;
                     }
                 }
-                
+               
+            }
+            if (mouseButtonStates[(byte)MouseButton.Primary] == 1)
+            {
+                _gameLogic.AddBomb(mouseX, mouseY);
             }
             return false;
         

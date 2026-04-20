@@ -30,10 +30,10 @@ public static class Program
         var gameWindow = new GameWindow(sdl);
         var gameLogic = new GameLogic();
         var gameRenderer = new GameRenderer(sdl, gameWindow, gameLogic);
-        var inputLogic = new InputLogic(sdl);
+        var inputLogic = new InputLogic(sdl,  gameLogic);
 
         
-        gameLogic.InitializeGame(gameRenderer);
+        
 
         bool quit = false;
 
@@ -42,16 +42,13 @@ public static class Program
             quit = inputLogic.ProcessInput();
             if (quit)
                 break;
-
-            gameLogic.ProcessFrame();
-
-            var elapsed = timer.Elapsed;
-            timer.Restart();
-
+            
+            gameLogic.ProcessFrame(); //nu face nmc acum ca e gol
             gameRenderer.Render();
+            
             ++framesRenderedCounter;
             
-            System.Threading.Thread.Sleep(TimeSpan.FromSeconds(0.41666666666666666666666666666667));
+            System.Threading.Thread.Sleep(16);
         }
 
         gameWindow.Destroy();
