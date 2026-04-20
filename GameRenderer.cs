@@ -24,12 +24,23 @@ public class GameRenderer
     
     private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
     
+    private readonly GameCamera _camera = new();
+    
     public GameRenderer(Sdl sdl, GameWindow gameWindow, GameLogic gameLogic)
     {
         _sdl = sdl;
         _renderer = gameWindow.CreateRenderer();
         _gameLogic = gameLogic;
         _instance = this;
+        
+        _camera.X = 0;
+        _camera.Y = 0;
+
+        var windowSize = gameWindow.Size;
+        _camera.Width = windowSize.Width;
+        _camera.Height = windowSize.Height;
+        
+        
     }
     public static int LoadTexture(string fileName, out TextureData textureData)
     {
@@ -71,6 +82,10 @@ public class GameRenderer
     
     public unsafe void Render()
     {
+        var playerPos = _gameLogic.GetPlayerPosition();
+        _camera.X = playerPos.X;
+        _camera.Y = playerPos.Y;
+        
         var renderer = (Renderer*)_renderer;
         
         _sdl.SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -87,24 +102,26 @@ public class GameRenderer
         _gameLogic.RenderTerrain(this); //intai randam terenul, ca background!
         
         _gameLogic.RenderAllObjects(timeSinceLastFrame, this);
+        
         _lastFrameRenderedAt = now;
         
 
         _sdl.RenderPresent(renderer);
     }
 
-    public unsafe void RenderGameObject(RenderableGameObject renderableGameObject)
+    public unsafe void RenderGameObject(RenderableGameObject gameObject)
     {
         var renderer = (Renderer*)_renderer;
-
-        if (renderableGameObject.TextureId > -1 &&
-            _texturePointers.TryGetValue(renderableGameObject.TextureId, out var texturePointer))
+        
+        if (gameObject.TextureId > -1 &&
+            _texturePointers.TryGetValue(gameObject.TextureId, out var texturePointer))
         {
+            var textureDest = _camera.ToScreenCoordinates(gameObject.TextureDestination);
             _sdl.RenderCopyEx(
                 renderer,
                 (Texture*)texturePointer,
-                renderableGameObject.TextureSource,
-                renderableGameObject.TextureDestination,
+                gameObject.TextureSource,
+                gameObject.TextureDestination,
                 0,
                 new Silk.NET.SDL.Point(0, 0),
                 RendererFlip.None
@@ -117,7 +134,19 @@ public class GameRenderer
     {
         if (_texturePointers.TryGetValue(textureId, out var texture))
         {
-            _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in dst);
+            var translatedDst = _camera.ToScreenCoordinates(dst);
+            _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in translatedDst);
         }
+    }
+    
+    public static (int X, int Y) ToWorldCoordinates(int X, int Y)
+    {
+        if (_instance == null)
+        {
+            throw new InvalidOperationException("GameRenderer instance is not initialized.");
+        }
+
+        var worldCoords = _instance._camera.ToWorldCoordinates(new(X, Y));
+        return (worldCoords.X, worldCoords.Y);
     }
 }

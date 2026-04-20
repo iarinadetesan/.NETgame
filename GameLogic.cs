@@ -16,6 +16,9 @@ public class GameLogic
     private readonly Dictionary<int, Tile> _tileIdMap = new();
     private Level _currentLevel = new();
     
+    
+    private PlayerObject? _player;
+    
     public void ProcessFrame()
     {
         
@@ -48,6 +51,7 @@ public class GameLogic
         {
             _gameObjects.Remove(item);
         }
+        _player?.Render(renderer);
     }
     
     public void AddBomb(int x, int y)
@@ -68,6 +72,8 @@ public class GameLogic
     
     public void InitializeGame()
     {
+        _player = new PlayerObject(1000);
+        
         var levelContent = File.ReadAllText(Path.Combine("Assets", "terrain.tmj"));
         var level = JsonSerializer.Deserialize<Level>(levelContent);
         if (level == null)
@@ -130,4 +136,19 @@ public class GameLogic
         }
     }
     
+    
+    public void UpdatePlayerPosition(double up, double down, double left, double right, int timeSinceLastUpdateInMs)
+    {
+        _player?.UpdatePosition(up, down, left, right, timeSinceLastUpdateInMs);
+    }
+
+    public (int X, int Y) GetPlayerPosition()
+    {
+        if (_player == null)
+        {
+            return (0, 0);
+        }
+
+        return (_player.X, _player.Y);
+    }
 }
