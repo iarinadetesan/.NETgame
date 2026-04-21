@@ -145,22 +145,22 @@ public class InputLogic
             var left = 0.0;
             var right = 0.0;
 
-            if (keyboardState[(int)KeyCode.Up] == 1)
+            if (keyboardState[(int)KeyCode.W] == 1)
             {
                 up = 1.0;
             }
 
-            if (keyboardState[(int)KeyCode.Down] == 1)
+            if (keyboardState[(int)KeyCode.S] == 1)
             {
                 down = 1.0;
             }
 
-            if (keyboardState[(int)KeyCode.Left] == 1)
+            if (keyboardState[(int)KeyCode.A] == 1)
             {
                 left = 1.0;
             }
 
-            if (keyboardState[(int)KeyCode.Right] == 1)
+            if (keyboardState[(int)KeyCode.D] == 1)
             {
                 right = 1.0;
             }

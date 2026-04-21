@@ -82,9 +82,17 @@ public class GameRenderer
     
     public unsafe void Render()
     {
+        
         var playerPos = _gameLogic.GetPlayerPosition();
-        _camera.X = playerPos.X;
-        _camera.Y = playerPos.Y;
+
+        int mapWidth = _gameLogic.GetMapWidthInPixels();
+        int mapHeight = _gameLogic.GetMapHeightInPixels();
+
+        int halfScreenWidth = _camera.Width / 2;
+        int halfScreenHeight = _camera.Height / 2;
+
+        _camera.X = Math.Clamp(playerPos.X, halfScreenWidth, mapWidth - halfScreenWidth);
+        _camera.Y = Math.Clamp(playerPos.Y, halfScreenHeight, mapHeight - halfScreenHeight);
         
         var renderer = (Renderer*)_renderer;
         

@@ -1,4 +1,6 @@
-﻿using Silk.NET.Maths;
+﻿using System;
+using System.IO;
+using Silk.NET.Maths;
 
 namespace TheAdventure.Models;
 
@@ -7,12 +9,29 @@ public class PlayerObject : GameObject
     public int X { get; set; } = 100;
     public int Y { get; set; } = 100;
 
-    private Rectangle<int> _source = new(0, 0, 24, 24);
-    private Rectangle<int> _target = new(0, 0, 24, 24);
+    private Rectangle<int> _source;
+    private Rectangle<int> _target;
 
     private readonly int _textureId;
 
-    private const int Speed = 128; // pixels per second
+    private const int Speed = 128;
+
+    private const int FrameWidth = 24;
+    private const int FrameHeight = 24;
+
+    private int _currentFrame = 0;
+    private int _animationTimer = 0;
+    private const int FrameDuration = 100;
+
+    private AnimationState _currentState = AnimationState.Idle;
+
+    private enum AnimationState
+    {
+        Idle,
+        WalkLeft,
+        WalkRight,
+        Rear
+    }
 
     public PlayerObject(int id) : base(id)
     {
@@ -22,25 +41,122 @@ public class PlayerObject : GameObject
             throw new Exception("Failed to load player texture");
         }
 
+        _source = new Rectangle<int>(0, 0, FrameWidth, FrameHeight);
+        _target = new Rectangle<int>(0, 0, FrameWidth, FrameHeight);
+
         UpdateTarget();
+        UpdateSource();
     }
+
     public void UpdatePosition(double up, double down, double left, double right, int time)
     {
         var pixelsToMove = Speed * (time / 1000.0);
 
-        Y -= (int)(pixelsToMove * up);
-        Y += (int)(pixelsToMove * down);
-        X -= (int)(pixelsToMove * left);
-        X += (int)(pixelsToMove * right);
+        bool isMoving = false;
 
+        if (left > 0)
+        {
+            X -= (int)(pixelsToMove * left);
+            _currentState = AnimationState.WalkLeft;
+            isMoving = true;
+        }
+        else if (right > 0)
+        {
+            X += (int)(pixelsToMove * right);
+            _currentState = AnimationState.WalkRight;
+            isMoving = true;
+        }
+
+        if (up > 0)
+        {
+            Y -= (int)(pixelsToMove * up);
+            _currentState = AnimationState.Rear;
+            isMoving = true;
+        }
+
+        if (down > 0)
+        {
+            Y += (int)(pixelsToMove * down);
+            isMoving = true;
+        }
+
+        if (!isMoving)
+        {
+            _currentState = AnimationState.Idle;
+        }
+
+        UpdateAnimation(time, isMoving);
         UpdateTarget();
+        UpdateSource();
     }
-    
+
+    private void UpdateAnimation(int time, bool isMoving)
+    {
+        _animationTimer += time;
+
+        int startFrame = 0;
+        int endFrame = 0;
+
+        switch (_currentState)
+        {
+            case AnimationState.Idle:
+                startFrame = 0;
+                endFrame = 3;
+                break;
+
+            case AnimationState.WalkRight:
+                startFrame = 8;
+                endFrame = 11;
+                break;
+
+            case AnimationState.WalkLeft:
+                startFrame = 4;
+                endFrame = 7;
+                break;
+            case AnimationState.Rear:
+                startFrame = 12;
+                endFrame = 15;
+                break;
+        }
+
+        if (!isMoving && _currentState != AnimationState.Idle)
+        {
+            _currentFrame = startFrame;
+            return;
+        }
+
+        if (_currentFrame < startFrame || _currentFrame > endFrame)
+        {
+            _currentFrame = startFrame;
+        }
+
+        if (_animationTimer >= FrameDuration)
+        {
+            _animationTimer = 0;
+            _currentFrame++;
+
+            if (_currentFrame > endFrame)
+            {
+                _currentFrame = startFrame;
+            }
+        }
+    }
+
+    private void UpdateSource()
+    {
+        _source = new Rectangle<int>(
+            _currentFrame * FrameWidth,
+            0,
+            FrameWidth,
+            FrameHeight
+        );
+    }
+
     private void UpdateTarget()
     {
-        _target = new(X + 24, Y - 42, 48, 48);
+        _target = new Rectangle<int>(X, Y, FrameWidth * 3, FrameHeight * 3);
     }
-    
+
     public void Render(GameRenderer renderer)
     {
         renderer.RenderTexture(_textureId, _source, _target);

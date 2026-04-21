@@ -90,48 +90,75 @@ public class GameLogic
                 throw new Exception("Failed to load tile set");
             }
 
-            foreach (var tile in tileSet.Tiles)
-            {
-                tile.TextureId = GameRenderer.LoadTexture(Path.Combine("Assets", tile.Image), out _);
-                _tileIdMap.Add(tile.Id!.Value, tile);
-            }
-
+            tileSet.TextureId = GameRenderer.LoadTexture(Path.Combine("Assets", tileSet.Image), out _);
             _loadedTileSets.Add(tileSet.Name, tileSet);
+            
         }
 
         _currentLevel = level;
     }
-    
+    public int GetMapWidthInPixels()
+    {
+        return (_currentLevel.Width ?? 0) * (_currentLevel.TileWidth ?? 0);
+    }
+
+    public int GetMapHeightInPixels()
+    {
+        return (_currentLevel.Height ?? 0) * (_currentLevel.TileHeight ?? 0);
+    }
     
     public void RenderTerrain(GameRenderer renderer)
     {
         foreach (var currentLayer in _currentLevel.Layers)
         {
-            for (int i = 0; i < _currentLevel.Width; ++i)
+            foreach (var tileSetRef in _currentLevel.TileSets)
             {
-                for (int j = 0; j < _currentLevel.Height; ++j)
+                var tileSet = _loadedTileSets.Values.FirstOrDefault();
+                if (tileSet == null)
                 {
-                    int? dataIndex = j * currentLayer.Width + i;
-                    if (dataIndex == null)
-                    {
-                        continue;
-                    }
-
-                    var currentTileId = currentLayer.Data[dataIndex.Value] - 1;
-                    if (currentTileId == null)
-                    {
-                        continue;
-                    }
-
-                    var currentTile = _tileIdMap[currentTileId.Value];
-
-                    var tileWidth = currentTile.ImageWidth ?? 0;
-                    var tileHeight = currentTile.ImageHeight ?? 0;
-
-                    var sourceRect = new Rectangle<int>(0, 0, tileWidth, tileHeight);
-                    var destRect = new Rectangle<int>(i * tileWidth, j * tileHeight, tileWidth, tileHeight);
-                    renderer.RenderTexture(currentTile.TextureId, sourceRect, destRect);
+                    continue;
                 }
+
+                int tileWidth = tileSet.TileWidth ?? 0;
+                int tileHeight = tileSet.TileHeight ?? 0;
+                int columns = tileSet.Columns ?? 1;
+
+                for (int i = 0; i < (_currentLevel.Width ?? 0); ++i)
+                {
+                    for (int j = 0; j < (_currentLevel.Height ?? 0); ++j)
+                    {
+                        int dataIndex = j * (currentLayer.Width ?? 0) + i;
+                        var tileValue = currentLayer.Data[dataIndex];
+
+                        if (tileValue == null || tileValue.Value == 0)
+                        {
+                            continue;
+                        }
+
+                        int currentTileId = tileValue.Value - 1;
+
+                        int column = currentTileId % columns;
+                        int row = currentTileId / columns;
+
+                        var sourceRect = new Silk.NET.Maths.Rectangle<int>(
+                            column * tileWidth,
+                            row * tileHeight,
+                            tileWidth,
+                            tileHeight
+                        );
+
+                        var destRect = new Silk.NET.Maths.Rectangle<int>(
+                            i * tileWidth,
+                            j * tileHeight,
+                            tileWidth,
+                            tileHeight
+                        );
+
+                        renderer.RenderTexture(tileSet.TextureId, sourceRect, destRect);
+                    }
+                }
+
+                break;
             }
         }
     }

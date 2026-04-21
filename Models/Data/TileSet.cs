@@ -1,5 +1,7 @@
-﻿namespace TheAdventure.Models.Data;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+
+namespace TheAdventure.Models.Data;
+
 public class TileSet
 {
     [JsonPropertyName("name")]
@@ -8,14 +10,26 @@ public class TileSet
     [JsonPropertyName("tilecount")]
     public int? TileCount { get; set; }
 
-    [JsonPropertyName("tiles")]
-    public List<Tile> Tiles { get; set; } = new();
-
     [JsonPropertyName("tilewidth")]
     public int? TileWidth { get; set; }
 
     [JsonPropertyName("tileheight")]
     public int? TileHeight { get; set; }
+
+    [JsonPropertyName("image")]
+    public string Image { get; set; } = "";
+
+    [JsonPropertyName("imagewidth")]
+    public int? ImageWidth { get; set; }
+
+    [JsonPropertyName("imageheight")]
+    public int? ImageHeight { get; set; }
+
+    [JsonPropertyName("columns")]
+    public int? Columns { get; set; }
+
+    [JsonIgnore]
+    public int TextureId { get; set; } = -1;
 }
 
 public class TileSetReference
