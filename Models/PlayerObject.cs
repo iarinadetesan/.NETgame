@@ -48,6 +48,58 @@ public class PlayerObject : GameObject
         UpdateSource();
     }
 
+    public void UpdatePosition(double up, double down, double left, double right, int time, GameLogic gameLogic)
+    {
+        var pixelsToMove = Speed * (time / 1000.0);
+        bool isMoving = false;
+
+        
+        int newX = X;
+        int newY = Y;
+
+        if (left > 0)
+        {
+            newX -= (int)(pixelsToMove * left);
+            _currentState = AnimationState.WalkLeft;
+            isMoving = true;
+        }
+        else if (right > 0)
+        {
+            newX += (int)(pixelsToMove * right);
+            _currentState = AnimationState.WalkRight;
+            isMoving = true;
+        }
+
+        if (up > 0)
+        {
+            newY -= (int)(pixelsToMove * up);
+            _currentState = AnimationState.Rear;
+            isMoving = true;
+        }
+
+        if (down > 0)
+        {
+            newY += (int)(pixelsToMove * down);
+            _currentState = AnimationState.Idle;
+            isMoving = true;
+        }
+
+        if (!isMoving)
+        {
+            _currentState = AnimationState.Idle;
+        }
+        var futureBounds = new Rectangle<int>(newX + 4, newY + 8, 16, 16);
+
+        if (!gameLogic.IsBlocked(futureBounds))
+        {
+            X = newX;
+            Y = newY;
+        }
+        
+        UpdateAnimation(time, isMoving);
+        UpdateTarget();
+        UpdateSource();
+    }
     public void UpdatePosition(double up, double down, double left, double right, int time)
     {
         var pixelsToMove = Speed * (time / 1000.0);
@@ -152,13 +204,21 @@ public class PlayerObject : GameObject
         );
     }
 
+    
     private void UpdateTarget()
     {
-        _target = new Rectangle<int>(X, Y, FrameWidth * 3, FrameHeight * 3);
+        _target = new Rectangle<int>(X, Y, FrameWidth , FrameHeight );
     }
 
     public void Render(GameRenderer renderer)
     {
         renderer.RenderTexture(_textureId, _source, _target);
+    }
+    public Rectangle<int> CollisionBounds
+    {
+        get
+        {
+            return new Rectangle<int>(X , Y , 24, 24);
+        }
     }
 }

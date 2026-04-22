@@ -1,0 +1,14 @@
+{ "columns":3,
+ "image":"small_House_with_door_grass.png",
+ "imageheight":192,
+ "imagewidth":192,
+ "margin":0,
+ "name":"small_House_with_door_grass",
+ "spacing":0,
+ "tilecount":9,
+ "tiledversion":"1.12.1",
+ "tileheight":64,
+ "tilewidth":64,
+ "type":"tileset",
+ "version":"1.10"
+}

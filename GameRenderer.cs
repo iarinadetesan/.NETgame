@@ -111,6 +111,15 @@ public class GameRenderer
         
         _gameLogic.RenderAllObjects(timeSinceLastFrame, this);
         
+        //doar ca sa vad colision objects
+       /* foreach (var col in _gameLogic.GetCollisionObjects())
+        {
+            RenderDebugRect(col.Bounds, 255, 0, 0);
+        }
+
+        var playerBounds = _gameLogic.GetPlayerCollisionBounds();
+        RenderDebugRect(playerBounds, 0, 0, 255);*/
+        
         _lastFrameRenderedAt = now;
         
 
@@ -156,5 +165,12 @@ public class GameRenderer
 
         var worldCoords = _instance._camera.ToWorldCoordinates(new(X, Y));
         return (worldCoords.X, worldCoords.Y);
+    }
+    public unsafe void RenderDebugRect(Rectangle<int> rect, byte r, byte g, byte b)
+    {
+        var translated = _camera.ToScreenCoordinates(rect);
+
+        _sdl.SetRenderDrawColor((Renderer*)_renderer, r, g, b, 255);
+        _sdl.RenderDrawRect((Renderer*)_renderer, translated);
     }
 }

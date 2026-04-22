@@ -1,0 +1,14 @@
+{ "columns":10,
+ "image":"Cherry Blossom Biom.png",
+ "imageheight":80,
+ "imagewidth":160,
+ "margin":0,
+ "name":"Cherry Blossom Biom",
+ "spacing":0,
+ "tilecount":50,
+ "tiledversion":"1.12.1",
+ "tileheight":16,
+ "tilewidth":16,
+ "type":"tileset",
+ "version":"1.10"
+}
