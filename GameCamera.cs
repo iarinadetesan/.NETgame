@@ -9,7 +9,8 @@ public class GameCamera
 
     public int Width { get; set; }
     public int Height { get; set; }
-
+    
+    
     public Rectangle<int> ToScreenCoordinates(Rectangle<int> rect)
     {
         return rect.GetTranslated(new Vector2D<int>(Width / 2 - X, Height / 2 - Y));

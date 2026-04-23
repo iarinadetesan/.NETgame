@@ -21,6 +21,15 @@ public class GameLogic
     
     private PlayerObject? _player;
     
+    private readonly List<CollectibleObject> _collectibles = new();
+    private readonly Dictionary<string, int> _inventory = new();
+    private int _collectibleIds = 2000;
+    
+    public IReadOnlyDictionary<string, int> Inventory => _inventory;
+    
+    
+
+    
     public void ProcessFrame()
     {
         
@@ -59,6 +68,12 @@ public class GameLogic
         {
             _gameObjects.Remove(item);
         }
+        
+        foreach (var collectible in _collectibles)
+        {
+            collectible.Render(renderer);
+        }
+        
         _player?.Render(renderer);
     }
     
@@ -106,10 +121,13 @@ public class GameLogic
             
         }
 
-        
+        /*_collectibles.Add(new CollectibleObject(_collectibleIds++, "Gem", "gem.png", 180, 180));
+        _collectibles.Add(new CollectibleObject(_collectibleIds++, "Coin", "coin.png", 260, 220));
+        _collectibles.Add(new CollectibleObject(_collectibleIds++, "Apple", "apple.png", 320, 260));*/
         _currentLevel = level;
-        
         LoadCollisionObjectsFromLevel();
+        LoadCollectiblesFromLevel();
+        
     }
     
     public bool IsBlocked(Silk.NET.Maths.Rectangle<int> rect)
@@ -146,6 +164,10 @@ public class GameLogic
     {
         foreach (var currentLayer in _currentLevel.Layers)
         {
+            if (currentLayer.Type != "tilelayer")
+            {
+                continue;
+            }
             if (currentLayer.Name == "Collision")
             {
                 continue;
@@ -289,5 +311,137 @@ public class GameLogic
         int localTileId = gid - bestMatch.Value.FirstGid;
         return (bestMatch.Value.TileSet, localTileId);
     }
+    public void TryCollectAtPlayer()
+    {
+        if (_player == null)
+        {
+            return;
+        }
+
+        var playerBounds = _player.CollisionBounds;
+
+        foreach (var collectible in _collectibles)
+        {
+            if (collectible.IsCollected)
+            {
+                continue;
+            }
+
+            if (Intersects(playerBounds, collectible.Bounds))
+            {
+                collectible.Collect();
+
+                if (!_inventory.ContainsKey(collectible.ItemType))
+                {
+                    _inventory[collectible.ItemType] = 0;
+                }
+
+                _inventory[collectible.ItemType]++;
+                
+                Console.WriteLine($"{collectible.ItemType} collected!");
+                Console.WriteLine($"Gem: {_inventory.GetValueOrDefault("Gem", 0)}");
+                Console.WriteLine($"Apple: {_inventory.GetValueOrDefault("Apple", 0)}");
+                Console.WriteLine($"Coin: {_inventory.GetValueOrDefault("Coin", 0)}");
+                break;
+            }
+        }
+    }
     
+    
+    private void LoadCollectiblesFromLevel()
+    {
+        _collectibles.Clear();
+
+        var collectiblesLayer = _currentLevel.Layers.FirstOrDefault(l => l.Name == "Collectibles");
+        if (collectiblesLayer == null)
+        {
+            return;
+        }
+
+        foreach (var obj in collectiblesLayer.Objects)
+        {
+            string itemType = obj.Name;
+
+            if (string.IsNullOrWhiteSpace(itemType))
+            {
+                continue;
+            }
+
+            int x = (int)(obj.X ?? 0);
+            int y = (int)(obj.Y ?? 0);
+
+            string texturePath = itemType switch
+            {
+                "Gem" => "gem.png",
+                "Apple" => "apple.png",
+                "Coin" => "coin.png",
+                _ => ""
+            };
+
+            if (string.IsNullOrWhiteSpace(texturePath))
+            {
+                continue;
+            }
+
+            _collectibles.Add(new CollectibleObject(
+                _collectibleIds++,
+                itemType,
+                texturePath,
+                x,
+                y
+            ));
+        }
+    }
+    
+    
+    public List<(string ItemType, int Count)> GetHotbarItems(int maxSlots = 5)
+    {
+        var items = new List<(string ItemType, int Count)>();
+
+        foreach (var kvp in _inventory)
+        {
+            if (kvp.Value > 0)
+            {
+                items.Add((kvp.Key, kvp.Value));
+            }
+
+            if (items.Count == maxSlots)
+            {
+                break;
+            }
+        }
+
+        return items;
+    }
+    
+    public List<HotbarSlot> GetHotbarSlots(int maxSlots = 5)
+    {
+        var slots = new List<HotbarSlot>();
+
+        foreach (var kvp in _inventory)
+        {
+            if (kvp.Value <= 0)
+            {
+                continue;
+            }
+
+            slots.Add(new HotbarSlot
+            {
+                ItemType = kvp.Key,
+                Count = kvp.Value
+            });
+
+            if (slots.Count == maxSlots)
+            {
+                break;
+            }
+        }
+
+        while (slots.Count < maxSlots)
+        {
+            slots.Add(new HotbarSlot());
+        }
+
+        return slots;
+    }
 }

@@ -15,6 +15,12 @@ public class Layer
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+    
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
+
+    [JsonPropertyName("objects")]
+    public List<TiledObject> Objects { get; set; } = new();
 
     // ... id, opacity, visible, x, y, type
 }

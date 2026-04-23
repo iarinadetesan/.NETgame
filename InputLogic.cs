@@ -9,6 +9,12 @@ public class InputLogic
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
     private int mouseX;
     private int mouseY;
+    
+    
+    
+    private int _selectedHotbarIndex = 0;
+    
+    public int SelectedHotbarIndex => _selectedHotbarIndex;
     public InputLogic(Sdl sdl, GameLogic gameLogic)
     {
         _sdl = sdl;
@@ -164,7 +170,32 @@ public class InputLogic
             {
                 right = 1.0;
             }
-
+            if (keyboardState[(int)KeyCode.E] == 1)
+            {
+                //Console.WriteLine("trying collect");
+                _gameLogic.TryCollectAtPlayer();
+                
+            }
+            if (keyboardState[(int)KeyCode.One] == 1)
+            {
+                _selectedHotbarIndex = 0;
+            }
+            if (keyboardState[(int)KeyCode.Two] == 1)
+            {
+                _selectedHotbarIndex = 1;
+            }
+            if (keyboardState[(int)KeyCode.Three] == 1)
+            {
+                _selectedHotbarIndex = 2;
+            }
+            if (keyboardState[(int)KeyCode.Four] == 1)
+            {
+                _selectedHotbarIndex = 3;
+            }
+            if (keyboardState[(int)KeyCode.Five] == 1)
+            {
+                _selectedHotbarIndex = 4;
+            }
             _gameLogic.UpdatePlayerPosition(up, down, left, right, timeSinceLastFrame);
             
             if (mouseButtonStates[(byte)MouseButton.Primary] == 1)

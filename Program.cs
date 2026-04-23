@@ -44,6 +44,9 @@ public static class Program
                 break;
             
             gameLogic.ProcessFrame(); //nu face nmc acum ca e gol
+            
+            gameRenderer.SetSelectedHotbarIndex(inputLogic.SelectedHotbarIndex);
+            
             gameRenderer.Render();
             
             ++framesRenderedCounter;

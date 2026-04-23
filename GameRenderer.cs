@@ -26,6 +26,14 @@ public class GameRenderer
     
     private readonly GameCamera _camera = new();
     
+    
+    private readonly Dictionary<string, int> _uiItemTextures = new();
+    
+    
+    private readonly int _hotbarTextureId;
+    private readonly TextureData _hotbarTextureData;
+    private int _selectedHotbarIndex = 0;
+    
     public GameRenderer(Sdl sdl, GameWindow gameWindow, GameLogic gameLogic)
     {
         _sdl = sdl;
@@ -40,6 +48,7 @@ public class GameRenderer
         _camera.Width = windowSize.Width;
         _camera.Height = windowSize.Height;
         
+        _hotbarTextureId = LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _hotbarTextureData);
         
     }
     public static int LoadTexture(string fileName, out TextureData textureData)
@@ -120,9 +129,9 @@ public class GameRenderer
         var playerBounds = _gameLogic.GetPlayerCollisionBounds();
         RenderDebugRect(playerBounds, 0, 0, 255);*/
         
+       RenderHotbar();
+       
         _lastFrameRenderedAt = now;
-        
-
         _sdl.RenderPresent(renderer);
     }
 
@@ -173,4 +182,156 @@ public class GameRenderer
         _sdl.SetRenderDrawColor((Renderer*)_renderer, r, g, b, 255);
         _sdl.RenderDrawRect((Renderer*)_renderer, translated);
     }
+    
+    public unsafe void RenderUiTexture(int textureId, Rectangle<int> src, Rectangle<int> dst)
+    {
+        if (_texturePointers.TryGetValue(textureId, out var texture))
+        {
+            _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in dst);
+        }
+    }
+    
+    private int GetUiTextureForItem(string itemType)
+    {
+        if (_uiItemTextures.TryGetValue(itemType, out var textureId))
+        {
+            return textureId;
+        }
+
+        string texturePath = itemType switch
+        {
+            
+            "Apple" => "apple.png",
+            "Gem" => "gem.png",
+            "Coin" => "coin.png",
+            _ => ""
+        };
+
+        if (string.IsNullOrWhiteSpace(texturePath))
+        {
+            return -1;
+        }
+
+        textureId = LoadTexture(Path.Combine("Assets", texturePath), out _);
+        _uiItemTextures[itemType] = textureId;
+        return textureId;
+    }
+    
+    
+ /* old method   
+    private unsafe void RenderHotbar()
+    {
+        var renderer = (Renderer*)_renderer;
+
+        const int slotCount = 5;
+        const int slotSize = 48;
+        const int spacing = 10;
+        const int bottomMargin = 20;
+
+        int totalWidth = slotCount * slotSize + (slotCount - 1) * spacing;
+        int startX = (_camera.Width - totalWidth) / 2;
+        int y = _camera.Height - slotSize - bottomMargin;
+
+        var hotbarItems = _gameLogic.GetHotbarItems(slotCount);
+
+        for (int i = 0; i < slotCount; i++)
+        {
+            int slotX = startX + i * (slotSize + spacing);
+            var slotRect = new Silk.NET.Maths.Rectangle<int>(slotX, y, slotSize, slotSize);
+
+            _sdl.SetRenderDrawColor(renderer, 40, 40, 40, 220);
+            _sdl.RenderFillRect(renderer, slotRect);
+
+            _sdl.SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            _sdl.RenderDrawRect(renderer, slotRect);
+
+            if (i < hotbarItems.Count)
+            {
+                var item = hotbarItems[i];
+                int textureId = GetUiTextureForItem(item.ItemType);
+
+                if (textureId != -1)
+                {
+                    var src = new Silk.NET.Maths.Rectangle<int>(0, 0, 16, 16);
+                    var dst = new Silk.NET.Maths.Rectangle<int>(slotX + 8, y + 8, 32, 32);
+                    RenderUiTexture(textureId, src, dst);
+                }
+
+                DrawCountBars(item.Count, slotX, y, slotSize);
+            }
+        }
+    }
+    */
+    private unsafe void DrawCountBars(int count, int slotX, int slotY, int slotSize)
+    {
+        var renderer = (Renderer*)_renderer;
+
+        int barsToDraw = Math.Min(count, 5);
+
+        for (int i = 0; i < barsToDraw; i++)
+        {
+            var barRect = new Silk.NET.Maths.Rectangle<int>(
+                slotX + 6 + i * 7,
+                slotY + slotSize - 10,
+                5,
+                4
+            );
+
+            _sdl.SetRenderDrawColor(renderer, 255, 215, 0, 255);
+            _sdl.RenderFillRect(renderer, barRect);
+        }
+    }
+    
+    public void SetSelectedHotbarIndex(int index)
+    {
+        if (index < 0 || index > 4)
+        {
+            return;
+        }
+
+        _selectedHotbarIndex = index;
+    }
+    
+    private unsafe void RenderHotbar()
+    {
+        const int slotCount = 5;
+        const int uiSlotSize = 48;
+        const int renderSlotSize = 64;
+        const int spacing = -10;
+        const int bottomMargin = 20;
+
+        int totalWidth = slotCount * renderSlotSize + (slotCount - 1) * spacing;
+        int startX = (_camera.Width - totalWidth) / 2;
+        int y = _camera.Height - renderSlotSize - bottomMargin;
+
+        var slots = _gameLogic.GetHotbarSlots(slotCount);
+
+        for (int i = 0; i < slotCount; i++)
+        {
+            int slotX = startX + i * (renderSlotSize + spacing);
+
+            var slotSrc = i == _selectedHotbarIndex
+                ? new Silk.NET.Maths.Rectangle<int>(48, 0, 48, 48)
+                : new Silk.NET.Maths.Rectangle<int>(0, 0, 48, 48);
+
+            var slotDst = new Silk.NET.Maths.Rectangle<int>(slotX, y, renderSlotSize, renderSlotSize);
+
+            RenderUiTexture(_hotbarTextureId, slotSrc, slotDst);
+
+            var slot = slots[i];
+            if (!string.IsNullOrWhiteSpace(slot.ItemType) && slot.Count > 0)
+            {
+                int itemTextureId = GetUiTextureForItem(slot.ItemType);
+                if (itemTextureId != -1)
+                {
+                    var itemSrc = new Silk.NET.Maths.Rectangle<int>(0, 0, 16, 16);
+                    var itemDst = new Silk.NET.Maths.Rectangle<int>(slotX + 16, y + 16, 32, 32);
+                    RenderUiTexture(itemTextureId, itemSrc, itemDst);
+                }
+
+                DrawCountBars(slot.Count, slotX, y, renderSlotSize);
+            }
+        }
+    }
+    
 }
