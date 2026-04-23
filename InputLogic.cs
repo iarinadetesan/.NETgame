@@ -10,19 +10,27 @@ public class InputLogic
     private int mouseX;
     private int mouseY;
     
-    
+    public bool ZoomInRequested { get; private set; }
+    public bool ZoomOutRequested { get; private set; }
     
     private int _selectedHotbarIndex = 0;
     
     public int SelectedHotbarIndex => _selectedHotbarIndex;
-    public InputLogic(Sdl sdl, GameLogic gameLogic)
+    
+    
+    private readonly GameRenderer _gameRenderer;
+    
+    
+    public InputLogic(Sdl sdl, GameLogic gameLogic, GameRenderer gameRenderer)
     {
         _sdl = sdl;
         _gameLogic = gameLogic;
+        _gameRenderer = gameRenderer;
     }
     public unsafe bool ProcessInput()
     {
-        
+        ZoomInRequested = false;
+        ZoomOutRequested = false;
             ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null),
                 (int)KeyCode.Count);
             Span<byte> mouseButtonStates = stackalloc byte[(int)MouseButton.Count];
@@ -92,7 +100,7 @@ public class InputLogic
 
                         break;
                     }
-
+                    
                     case (uint)EventType.Fingermotion:
                     {
                         break;
@@ -106,9 +114,23 @@ public class InputLogic
                     }
                     case (uint)EventType.Mousebuttondown:
                     {
-                        mouseX = ev.Motion.X;
-                        mouseY = ev.Motion.Y;
+                        
+                        mouseX = ev.Button.X;
+                        mouseY = ev.Button.Y;
                         mouseButtonStates[ev.Button.Button] = 1;
+
+                        if (_gameRenderer.IsZoomInButtonClicked(mouseX, mouseY))
+                        {
+                            ZoomInRequested = true;
+                            break;
+                        }
+
+                        if (_gameRenderer.IsZoomOutButtonClicked(mouseX, mouseY))
+                        {
+                            ZoomOutRequested = true;
+                            break;
+                        }
+                        
                         break;
                     }
 
@@ -127,6 +149,15 @@ public class InputLogic
 
                     case (uint)EventType.Mousewheel:
                     {
+                        if (ev.Wheel.Y > 0)
+                        {
+                            ZoomInRequested = true;
+                        }
+                        else if (ev.Wheel.Y < 0)
+                        {
+                            ZoomOutRequested = true;
+                        }
+
                         break;
                     }
 
@@ -137,7 +168,7 @@ public class InputLogic
 
                     case (uint)EventType.Keydown:
                     {
-                        Console.WriteLine($"Key down: {(KeyCode)ev.Key.Keysym.Scancode}");
+                        //Console.WriteLine($"Key down: {(KeyCode)ev.Key.Keysym.Scancode}");
                         break;
                     }
                 }
@@ -198,11 +229,12 @@ public class InputLogic
             }
             _gameLogic.UpdatePlayerPosition(up, down, left, right, timeSinceLastFrame);
             
-            if (mouseButtonStates[(byte)MouseButton.Primary] == 1)
+         /* nu mai vreau sa adaug bombe
+          if (mouseButtonStates[(byte)MouseButton.Primary] == 1)
             {
                 var worldCoords = GameRenderer.ToWorldCoordinates(mouseX, mouseY);
                 _gameLogic.AddBomb(worldCoords.X, worldCoords.Y);
-            }
+            }*/
             return false;
         
     }

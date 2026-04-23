@@ -30,7 +30,7 @@ public static class Program
         var gameWindow = new GameWindow(sdl);
         var gameLogic = new GameLogic();
         var gameRenderer = new GameRenderer(sdl, gameWindow, gameLogic);
-        var inputLogic = new InputLogic(sdl,  gameLogic);
+        var inputLogic = new InputLogic(sdl,  gameLogic, gameRenderer);
 
         gameLogic.InitializeGame();
         
@@ -40,6 +40,18 @@ public static class Program
         while (!quit)
         {
             quit = inputLogic.ProcessInput();
+            
+            if (inputLogic.ZoomInRequested)
+            {
+                gameRenderer.ZoomIn();
+            }
+
+            if (inputLogic.ZoomOutRequested)
+            {
+                gameRenderer.ZoomOut();
+            }
+            
+            
             if (quit)
                 break;
             

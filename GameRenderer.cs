@@ -34,6 +34,14 @@ public class GameRenderer
     private readonly TextureData _hotbarTextureData;
     private int _selectedHotbarIndex = 0;
     
+    private Silk.NET.Maths.Rectangle<int> _zoomInButton = new(700, 20, 40, 40);
+    private Silk.NET.Maths.Rectangle<int> _zoomOutButton = new(750, 20, 40, 40);
+
+    private readonly int _zoomButtonsTextureId;
+    private readonly TextureData _zoomButtonsTextureData;
+    private readonly float[] _zoomLevels = { 1.0f, 2.0f, 3.0f , 4.0f};
+    private int _zoomLevelIndex = 0;
+    
     public GameRenderer(Sdl sdl, GameWindow gameWindow, GameLogic gameLogic)
     {
         _sdl = sdl;
@@ -43,13 +51,14 @@ public class GameRenderer
         
         _camera.X = 0;
         _camera.Y = 0;
-
+        _camera.Zoom = _zoomLevels[_zoomLevelIndex];
         var windowSize = gameWindow.Size;
         _camera.Width = windowSize.Width;
         _camera.Height = windowSize.Height;
         
         _hotbarTextureId = LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _hotbarTextureData);
-        
+        _zoomButtonsTextureId =
+            LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _zoomButtonsTextureData);
     }
     public static int LoadTexture(string fileName, out TextureData textureData)
     {
@@ -91,17 +100,18 @@ public class GameRenderer
     
     public unsafe void Render()
     {
-        
         var playerPos = _gameLogic.GetPlayerPosition();
-
+        _camera.X = playerPos.X;
+        _camera.Y = playerPos.Y;
+        
         int mapWidth = _gameLogic.GetMapWidthInPixels();
         int mapHeight = _gameLogic.GetMapHeightInPixels();
 
         int halfScreenWidth = _camera.Width / 2;
         int halfScreenHeight = _camera.Height / 2;
 
-        _camera.X = Math.Clamp(playerPos.X, halfScreenWidth, mapWidth - halfScreenWidth);
-        _camera.Y = Math.Clamp(playerPos.Y, halfScreenHeight, mapHeight - halfScreenHeight);
+       // _camera.X = Math.Clamp(playerPos.X, halfScreenWidth, mapWidth - halfScreenWidth);
+       // _camera.Y = Math.Clamp(playerPos.Y, halfScreenHeight, mapHeight - halfScreenHeight);
         
         var renderer = (Renderer*)_renderer;
         
@@ -130,6 +140,8 @@ public class GameRenderer
         RenderDebugRect(playerBounds, 0, 0, 255);*/
         
        RenderHotbar();
+       RenderZoomButtons();
+       
        
         _lastFrameRenderedAt = now;
         _sdl.RenderPresent(renderer);
@@ -147,7 +159,7 @@ public class GameRenderer
                 renderer,
                 (Texture*)texturePointer,
                 gameObject.TextureSource,
-                gameObject.TextureDestination,
+                textureDest,
                 0,
                 new Silk.NET.SDL.Point(0, 0),
                 RendererFlip.None
@@ -217,51 +229,15 @@ public class GameRenderer
         return textureId;
     }
     
-    
- /* old method   
-    private unsafe void RenderHotbar()
+    private unsafe void RenderZoomButtons()
     {
-        var renderer = (Renderer*)_renderer;
+        var zoomInSrc = new Silk.NET.Maths.Rectangle<int>(837, 130, 30, 30);
+        var zoomOutSrc = new Silk.NET.Maths.Rectangle<int>(837, 160, 30, 30);
 
-        const int slotCount = 5;
-        const int slotSize = 48;
-        const int spacing = 10;
-        const int bottomMargin = 20;
-
-        int totalWidth = slotCount * slotSize + (slotCount - 1) * spacing;
-        int startX = (_camera.Width - totalWidth) / 2;
-        int y = _camera.Height - slotSize - bottomMargin;
-
-        var hotbarItems = _gameLogic.GetHotbarItems(slotCount);
-
-        for (int i = 0; i < slotCount; i++)
-        {
-            int slotX = startX + i * (slotSize + spacing);
-            var slotRect = new Silk.NET.Maths.Rectangle<int>(slotX, y, slotSize, slotSize);
-
-            _sdl.SetRenderDrawColor(renderer, 40, 40, 40, 220);
-            _sdl.RenderFillRect(renderer, slotRect);
-
-            _sdl.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            _sdl.RenderDrawRect(renderer, slotRect);
-
-            if (i < hotbarItems.Count)
-            {
-                var item = hotbarItems[i];
-                int textureId = GetUiTextureForItem(item.ItemType);
-
-                if (textureId != -1)
-                {
-                    var src = new Silk.NET.Maths.Rectangle<int>(0, 0, 16, 16);
-                    var dst = new Silk.NET.Maths.Rectangle<int>(slotX + 8, y + 8, 32, 32);
-                    RenderUiTexture(textureId, src, dst);
-                }
-
-                DrawCountBars(item.Count, slotX, y, slotSize);
-            }
-        }
+        RenderUiTexture(_zoomButtonsTextureId, zoomInSrc, _zoomInButton);
+        RenderUiTexture(_zoomButtonsTextureId, zoomOutSrc, _zoomOutButton);
     }
-    */
+ 
     private unsafe void DrawCountBars(int count, int slotX, int slotY, int slotSize)
     {
         var renderer = (Renderer*)_renderer;
@@ -332,6 +308,42 @@ public class GameRenderer
                 DrawCountBars(slot.Count, slotX, y, renderSlotSize);
             }
         }
+    }
+    
+    public void ZoomIn()
+    {
+        if (_zoomLevelIndex < _zoomLevels.Length - 1)
+        {
+            _zoomLevelIndex++;
+            _camera.Zoom = _zoomLevels[_zoomLevelIndex];
+        }
+    }
+
+    public void ZoomOut()
+    {
+        if (_zoomLevelIndex > 0)
+        {
+            _zoomLevelIndex--;
+            _camera.Zoom = _zoomLevels[_zoomLevelIndex];
+        }
+    }
+    
+    public bool IsZoomInButtonClicked(int mouseX, int mouseY)
+    {
+        return PointInRect(mouseX, mouseY, _zoomInButton);
+    }
+
+    public bool IsZoomOutButtonClicked(int mouseX, int mouseY)
+    {
+        return PointInRect(mouseX, mouseY, _zoomOutButton);
+    }
+
+    private bool PointInRect(int x, int y, Silk.NET.Maths.Rectangle<int> rect)
+    {
+        return x >= rect.Origin.X &&
+               x <= rect.Origin.X + rect.Size.X &&
+               y >= rect.Origin.Y &&
+               y <= rect.Origin.Y + rect.Size.Y;
     }
     
 }
