@@ -4,10 +4,10 @@ using Silk.NET.SDL;
 
 namespace TheAdventure;
 
-public class GameWindow
+public class GameWindow : IDisposable
 {
     private readonly Sdl _sdl;
-    private readonly IntPtr _window;
+    private IntPtr _window;
     public unsafe (int Width, int Height) Size
     {
         get
@@ -61,12 +61,25 @@ public class GameWindow
         }
     }
 
-    public void Destroy()
+    private unsafe void ReleaseUnmanagedResources()
     {
-        unsafe
+        if (_window != IntPtr.Zero)
         {
             _sdl.DestroyWindow((Window*)_window);
+            _window = IntPtr.Zero;
         }
     }
+
+    public void Dispose()
+    {
+        ReleaseUnmanagedResources();
+        GC.SuppressFinalize(this);
+    }
+
+    ~GameWindow()
+    {
+        ReleaseUnmanagedResources();
+    }
+
 
 }

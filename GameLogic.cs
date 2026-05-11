@@ -10,7 +10,6 @@ public class GameLogic
     
     
     private Dictionary<int,GameObject> _gameObjects = new();
-    private int _bombIds = 100;
 
     
     private readonly List<(int FirstGid, TileSet TileSet)> _loadedTileSets = new();
@@ -23,17 +22,52 @@ public class GameLogic
     
     private readonly List<CollectibleObject> _collectibles = new();
     private readonly Dictionary<string, int> _inventory = new();
-    private int _collectibleIds = 2000;
+    
     
     public IReadOnlyDictionary<string, int> Inventory => _inventory;
     
-    
+    private readonly GameRenderer _renderer;
+    private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
 
-    
+
+    public GameLogic(GameRenderer renderer)
+    {
+        _renderer = renderer;
+    }
+
     public void ProcessFrame()
     {
         
     }
+    
+    public void RenderFrame()
+    {
+        if (_player != null)
+        {
+            _renderer.CameraLookAt(_player.X, _player.Y);
+        }
+
+        _renderer.SetDrawColor(255, 255, 255, 255);
+        _renderer.ClearScreen();
+
+        var timeSinceLastFrame = 0.0;
+        var now = DateTimeOffset.UtcNow;
+
+        if (_lastFrameRenderedAt > DateTimeOffset.MinValue)
+        {
+            timeSinceLastFrame = now.Subtract(_lastFrameRenderedAt).TotalMilliseconds;
+
+        }
+
+        RenderTerrain();
+        RenderAllObjects(timeSinceLastFrame);
+
+        _renderer.RenderUi(GetHotbarSlots());
+
+        _lastFrameRenderedAt = now;
+        _renderer.PresentFrame();
+    }
+
 
     public IEnumerable<RenderableGameObject> GetRenderables()
     {
@@ -49,14 +83,14 @@ public class GameLogic
         return _collisionObjects;
     }
     
-    public void RenderAllObjects(int timeSinceLastFrame, GameRenderer renderer)
+    public void RenderAllObjects(double timeSinceLastFrame)
     {
         List<int> itemsToRemove = new List<int>();
         foreach (var gameObject in GetRenderables())
         {
             if (gameObject.Update(timeSinceLastFrame))
             {
-                gameObject.Render(renderer);
+                gameObject.Render(_renderer);
             }
             else
             {
@@ -71,31 +105,33 @@ public class GameLogic
         
         foreach (var collectible in _collectibles)
         {
-            collectible.Render(renderer);
+            collectible.Render(_renderer);
         }
         
-        _player?.Render(renderer);
+        _player?.Render(_renderer);
     }
     
     public void AddBomb(int x, int y)
     {
         AnimatedGameObject bomb = new AnimatedGameObject(
+            _renderer,
             Path.Combine("Assets", "BombExploding.png"),
             2, 
-            _bombIds, 
             81, 
             9, 
             9, 
             x, 
             y);
         _gameObjects.Add(bomb.Id, bomb);
-        ++_bombIds;
+        
     }
     
     
     public void InitializeGame()
     {
-        _player = new PlayerObject(1000);
+        
+        _player = new PlayerObject(_renderer);
+
         
         var levelContent = File.ReadAllText(Path.Combine("Assets", "terrain.tmj"));
         var level = JsonSerializer.Deserialize<Level>(levelContent);
@@ -103,6 +139,17 @@ public class GameLogic
         {
             throw new Exception("Failed to load level");
         }
+        
+        
+        if (level.Width == null || level.Height == null)
+        {
+            throw new Exception("Invalid level dimensions");
+        }
+        if (level.TileWidth == null || level.TileHeight == null)
+        {
+            throw new Exception("Invalid tile dimensions");
+        }
+        
        // _collisionObjects.Add(new CollisionObject(new Silk.NET.Maths.Rectangle<int>(200, 200, 32, 32)));
        // _collisionObjects.Add(new CollisionObject(new Silk.NET.Maths.Rectangle<int>(250, 200, 32, 32)));
        // _collisionObjects.Add(new CollisionObject(new Silk.NET.Maths.Rectangle<int>(300, 200, 32, 32)));
@@ -115,7 +162,7 @@ public class GameLogic
                 throw new Exception("Failed to load tile set");
             }
 
-            tileSet.TextureId = GameRenderer.LoadTexture(Path.Combine("Assets", tileSet.Image), out _);
+            tileSet.TextureId = _renderer.LoadTexture(Path.Combine("Assets", tileSet.Image), out _);
             _loadedTileSets.Add((tileSetRef.FirstGID ?? 1, tileSet));
             _loadedTileSets.Sort((a, b) => a.FirstGid.CompareTo(b.FirstGid));
             
@@ -127,7 +174,13 @@ public class GameLogic
         _currentLevel = level;
         LoadCollisionObjectsFromLevel();
         LoadCollectiblesFromLevel();
-        
+        _renderer.SetCameraWorldBounds(new Rectangle<int>(
+            0,
+            0,
+            GetMapWidthInPixels(),
+            GetMapHeightInPixels()
+        ));
+
     }
     
     public bool IsBlocked(Silk.NET.Maths.Rectangle<int> rect)
@@ -160,7 +213,7 @@ public class GameLogic
         return (_currentLevel.Height ?? 0) * (_currentLevel.TileHeight ?? 0);
     }
     
-    public void RenderTerrain(GameRenderer renderer)
+    public void RenderTerrain()
     {
         foreach (var currentLayer in _currentLevel.Layers)
         {
@@ -219,7 +272,7 @@ public class GameLogic
                         tileHeight
                     );
 
-                    renderer.RenderTexture(tileSet.TextureId, sourceRect, destRect);
+                    _renderer.RenderTexture(tileSet.TextureId, sourceRect, destRect);
                 }
             }
         }
@@ -231,15 +284,7 @@ public class GameLogic
         _player?.UpdatePosition(up, down, left, right, timeSinceLastUpdateInMs, this); //sterg this daca vreau ca inainte
     }
     
-    public (int X, int Y) GetPlayerPosition()
-    {
-        if (_player == null)
-        {
-            return (0, 0);
-        }
-
-        return (_player.X, _player.Y);
-    }
+    
 
     public Rectangle<int> GetPlayerCollisionBounds()
     {
@@ -384,7 +429,8 @@ public class GameLogic
             }
 
             _collectibles.Add(new CollectibleObject(
-                _collectibleIds++,
+                _renderer,
+
                 itemType,
                 texturePath,
                 x,

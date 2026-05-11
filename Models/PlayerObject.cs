@@ -33,9 +33,10 @@ public class PlayerObject : GameObject
         Rear
     }
 
-    public PlayerObject(int id) : base(id)
+    public PlayerObject(GameRenderer renderer) : base()
     {
-        _textureId = GameRenderer.LoadTexture(Path.Combine("Assets", "player.png"), out _);
+        _textureId = renderer.LoadTexture(Path.Combine("Assets", "player.png"), out _);
+
         if (_textureId < 0)
         {
             throw new Exception("Failed to load player texture");

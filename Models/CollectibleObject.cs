@@ -21,13 +21,14 @@ public class CollectibleObject : GameObject
     private const int SpriteHeight = 16;
     private const int RenderSize = 24;
 
-    public CollectibleObject(int id, string itemType, string texturePath, int x, int y) : base(id)
+    public CollectibleObject(GameRenderer renderer, string itemType, string texturePath, int x, int y) : base()
     {
+
         ItemType = itemType;
         X = x;
         Y = y;
 
-        _textureId = GameRenderer.LoadTexture(Path.Combine("Assets", texturePath), out _);
+        _textureId = renderer.LoadTexture(Path.Combine("Assets", texturePath), out _);
 
         _source = new Rectangle<int>(0, 0, SpriteWidth, SpriteHeight);
         _target = new Rectangle<int>(X, Y, RenderSize, RenderSize);

@@ -11,11 +11,10 @@ using TheAdventure.Models;
 namespace TheAdventure;
 public class GameRenderer
 {
-    private static GameRenderer? _instance;
     
     private readonly Sdl _sdl;
     private readonly IntPtr _renderer;
-    private readonly GameLogic _gameLogic;
+    
     
     
     private readonly Dictionary<int, IntPtr> _texturePointers = new();
@@ -24,7 +23,7 @@ public class GameRenderer
     
     private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
     
-    private readonly GameCamera _camera = new();
+    private readonly GameCamera _camera ;
     
     
     private readonly Dictionary<string, int> _uiItemTextures = new();
@@ -42,30 +41,28 @@ public class GameRenderer
     private readonly float[] _zoomLevels = { 1.0f, 2.0f, 3.0f , 4.0f};
     private int _zoomLevelIndex = 0;
     
-    public GameRenderer(Sdl sdl, GameWindow gameWindow, GameLogic gameLogic)
+    public GameRenderer(Sdl sdl, GameWindow gameWindow)
     {
         _sdl = sdl;
         _renderer = gameWindow.CreateRenderer();
-        _gameLogic = gameLogic;
-        _instance = this;
         
-        _camera.X = 0;
-        _camera.Y = 0;
-        _camera.Zoom = _zoomLevels[_zoomLevelIndex];
+        
         var windowSize = gameWindow.Size;
-        _camera.Width = windowSize.Width;
-        _camera.Height = windowSize.Height;
+
+        _camera = new GameCamera(windowSize.Width, windowSize.Height);
+        _camera.Zoom = _zoomLevels[_zoomLevelIndex];
+        _camera.LookAt(0, 0);
+
+
         
         _hotbarTextureId = LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _hotbarTextureData);
         _zoomButtonsTextureId =
             LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _zoomButtonsTextureData);
     }
-    public static int LoadTexture(string fileName, out TextureData textureData)
-    {
-        return _instance!._LoadTextureInternal(fileName, out textureData);
-    }
+   
     
-    private unsafe int _LoadTextureInternal(string fileName, out TextureData textureData)
+    public unsafe int LoadTexture(string fileName, out TextureData textureData)
+
     {
         using var fStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var image = Image.Load<Rgba32>(fStream);
@@ -97,96 +94,69 @@ public class GameRenderer
         return _index++;
     }
     
-    
-    public unsafe void Render()
+    public unsafe void SetDrawColor(byte r, byte g, byte b, byte a)
     {
-        var playerPos = _gameLogic.GetPlayerPosition();
-        _camera.X = playerPos.X;
-        _camera.Y = playerPos.Y;
-        
-        int mapWidth = _gameLogic.GetMapWidthInPixels();
-        int mapHeight = _gameLogic.GetMapHeightInPixels();
-
-        int halfScreenWidth = _camera.Width / 2;
-        int halfScreenHeight = _camera.Height / 2;
-
-       // _camera.X = Math.Clamp(playerPos.X, halfScreenWidth, mapWidth - halfScreenWidth);
-       // _camera.Y = Math.Clamp(playerPos.Y, halfScreenHeight, mapHeight - halfScreenHeight);
-        
-        var renderer = (Renderer*)_renderer;
-        
-        _sdl.SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        _sdl.RenderClear(renderer);
-
-        var timeSinceLastFrame = 0;
-        var now = DateTimeOffset.UtcNow;
-
-        if (_lastFrameRenderedAt > DateTimeOffset.MinValue)
-        {
-            timeSinceLastFrame = (int)now.Subtract(_lastFrameRenderedAt).TotalMilliseconds;
-        }
-        
-        _gameLogic.RenderTerrain(this); //intai randam terenul, ca background!
-        
-        _gameLogic.RenderAllObjects(timeSinceLastFrame, this);
-        
-        //doar ca sa vad colision objects
-       /* foreach (var col in _gameLogic.GetCollisionObjects())
-        {
-            RenderDebugRect(col.Bounds, 255, 0, 0);
-        }
-
-        var playerBounds = _gameLogic.GetPlayerCollisionBounds();
-        RenderDebugRect(playerBounds, 0, 0, 255);*/
-        
-       RenderHotbar();
-       RenderZoomButtons();
-       
-       
-        _lastFrameRenderedAt = now;
-        _sdl.RenderPresent(renderer);
+        _sdl.SetRenderDrawColor((Renderer*)_renderer, r, g, b, a);
     }
 
-    public unsafe void RenderGameObject(RenderableGameObject gameObject)
+    public unsafe void ClearScreen()
     {
-        var renderer = (Renderer*)_renderer;
-        
-        if (gameObject.TextureId > -1 &&
-            _texturePointers.TryGetValue(gameObject.TextureId, out var texturePointer))
-        {
-            var textureDest = _camera.ToScreenCoordinates(gameObject.TextureDestination);
-            _sdl.RenderCopyEx(
-                renderer,
-                (Texture*)texturePointer,
-                gameObject.TextureSource,
-                textureDest,
-                0,
-                new Silk.NET.SDL.Point(0, 0),
-                RendererFlip.None
-            );
-        }
+        _sdl.RenderClear((Renderer*)_renderer);
     }
+
+    public unsafe void PresentFrame()
+    {
+        _sdl.RenderPresent((Renderer*)_renderer);
+    }
+
+    public void CameraLookAt(int x, int y)
+    {
+        _camera.LookAt(x, y);
+    }
+
+    public void RenderUi(List<HotbarSlot> slots)
+    {
+        RenderHotbar(slots);
+        RenderZoomButtons();
+    }
+
+
+    
+
     
     
-    public unsafe void RenderTexture(int textureId, Rectangle<int> src, Rectangle<int> dst)
+    
+    public unsafe void RenderTexture(
+        int textureId,
+        Rectangle<int> src,
+        Rectangle<int> dst,
+        RendererFlip flip = RendererFlip.None,
+        double angle = 0.0,
+        Silk.NET.SDL.Point center = default)
     {
         if (_texturePointers.TryGetValue(textureId, out var texture))
         {
             var translatedDst = _camera.ToScreenCoordinates(dst);
-            _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in translatedDst);
+
+            _sdl.RenderCopyEx(
+                (Renderer*)_renderer,
+                (Texture*)texture,
+                in src,
+                in translatedDst,
+                angle,
+                in center,
+                flip
+            );
         }
     }
-    
-    public static (int X, int Y) ToWorldCoordinates(int X, int Y)
-    {
-        if (_instance == null)
-        {
-            throw new InvalidOperationException("GameRenderer instance is not initialized.");
-        }
 
-        var worldCoords = _instance._camera.ToWorldCoordinates(new(X, Y));
+    
+    public (int X, int Y) ToWorldCoordinates(int x, int y)
+    {
+        var worldCoords = _camera.ToWorldCoordinates(new(x, y));
         return (worldCoords.X, worldCoords.Y);
     }
+
     public unsafe void RenderDebugRect(Rectangle<int> rect, byte r, byte g, byte b)
     {
         var translated = _camera.ToScreenCoordinates(rect);
@@ -225,6 +195,7 @@ public class GameRenderer
         }
 
         textureId = LoadTexture(Path.Combine("Assets", texturePath), out _);
+        
         _uiItemTextures[itemType] = textureId;
         return textureId;
     }
@@ -268,7 +239,7 @@ public class GameRenderer
         _selectedHotbarIndex = index;
     }
     
-    private unsafe void RenderHotbar()
+    private unsafe void RenderHotbar(List<HotbarSlot> slots)
     {
         const int slotCount = 5;
         const int uiSlotSize = 48;
@@ -279,8 +250,7 @@ public class GameRenderer
         int totalWidth = slotCount * renderSlotSize + (slotCount - 1) * spacing;
         int startX = (_camera.Width - totalWidth) / 2;
         int y = _camera.Height - renderSlotSize - bottomMargin;
-
-        var slots = _gameLogic.GetHotbarSlots(slotCount);
+        
 
         for (int i = 0; i < slotCount; i++)
         {
@@ -345,5 +315,9 @@ public class GameRenderer
                y >= rect.Origin.Y &&
                y <= rect.Origin.Y + rect.Size.Y;
     }
-    
+    public void SetCameraWorldBounds(Rectangle<int> bounds)
+    {
+        _camera.SetWorldBounds(bounds);
+    }
+
 }

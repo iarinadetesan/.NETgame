@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+
 using Silk.NET.SDL;
 
 namespace TheAdventure;
@@ -10,8 +10,7 @@ public static class Program
     {
         var sdl = new Sdl(new SdlContext());
 
-        UInt64 framesRenderedCounter = 0;
-        var timer = new Stopwatch();
+        
 
         var sdlInitResult = sdl.Init(
             Sdl.InitVideo |
@@ -27,13 +26,18 @@ public static class Program
             throw new InvalidOperationException("Failed to initialize SDL.");
         }
 
-        var gameWindow = new GameWindow(sdl);
-        var gameLogic = new GameLogic();
-        var gameRenderer = new GameRenderer(sdl, gameWindow, gameLogic);
-        var inputLogic = new InputLogic(sdl,  gameLogic, gameRenderer);
+        using var gameWindow = new GameWindow(sdl);
+
+        
+        var gameRenderer = new GameRenderer(sdl, gameWindow);
+        var gameLogic = new GameLogic(gameRenderer);
+        var inputLogic = new InputLogic(sdl, gameLogic, gameRenderer);
+
 
         gameLogic.InitializeGame();
         
+        
+
 
         bool quit = false;
 
@@ -55,18 +59,19 @@ public static class Program
             if (quit)
                 break;
             
-            gameLogic.ProcessFrame(); //nu face nmc acum ca e gol
+            gameLogic.ProcessFrame(); 
             
             gameRenderer.SetSelectedHotbarIndex(inputLogic.SelectedHotbarIndex);
             
-            gameRenderer.Render();
+            gameLogic.RenderFrame();
+
             
-            ++framesRenderedCounter;
             
-            System.Threading.Thread.Sleep(16);
+            
+            System.Threading.Thread.Sleep(13);
         }
 
-        gameWindow.Destroy();
+        
         sdl.Quit();
     }
 }
