@@ -25,7 +25,8 @@ public static class Program
         {
             throw new InvalidOperationException("Failed to initialize SDL.");
         }
-
+      //  FileReader fileReader = new FileReader();
+        
         using var gameWindow = new GameWindow(sdl);
         {
             
@@ -57,7 +58,12 @@ public static class Program
 
 
                 if (quit)
+                {
+                    engine.SaveGame();
                     break;
+                }
+                    
+                    
 
                 engine.ProcessFrame();
 
@@ -70,8 +76,10 @@ public static class Program
 
                 System.Threading.Thread.Sleep(13);
             }
-
+            
         }
+        
+
         sdl.Quit();
     }
 }

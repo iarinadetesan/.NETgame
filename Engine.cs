@@ -7,6 +7,10 @@ namespace TheAdventure;
 
 public class Engine
 {
+    private static readonly string SaveFilePath =
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "savegame.json"));
+
+
     private Input _input;
     
     private Dictionary<int,GameObject> _gameObjects = new();
@@ -190,6 +194,8 @@ public class Engine
             GetMapWidthInPixels(),
             GetMapHeightInPixels()
         ));
+        
+        LoadGame();
 
     }
     
@@ -497,4 +503,35 @@ public class Engine
 
         return slots;
     }
+    
+    private void LoadGame()
+    {
+        if (!File.Exists(SaveFilePath))
+        {
+            return;
+        }
+
+        var saveData = SaveData.Load(SaveFilePath);
+
+        _inventory.Clear();
+
+        foreach (var item in saveData.Inventory)
+        {
+            _inventory[item.Key] = item.Value;
+        }
+    }
+
+    
+    public void SaveGame()
+    {
+        var saveData = new SaveData
+        {
+            Inventory = new Dictionary<string, int>(_inventory)
+        };
+
+        saveData.Save(SaveFilePath);
+    }
+
+
+
 }
