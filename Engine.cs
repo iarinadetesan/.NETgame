@@ -48,7 +48,7 @@ public class Engine
         double down = _input.IsSPressed() ? 1.0 : 0.0;
         double left = _input.IsAPressed() ? 1.0 : 0.0;
         double right = _input.IsDPressed() ? 1.0 : 0.0;
-        _player?.UpdatePosition(up, down, left, right, (int)msSinceLastFrame);
+        _player?.UpdatePosition(up, down, left, right, 24,24,(int)msSinceLastFrame,this);
         
         if (_input.IsEPressed())
         {
@@ -58,11 +58,12 @@ public class Engine
     
     public void RenderFrame()
     {
-        if (_player != null)
+       /* if (_player != null)
         {
             _renderer.CameraLookAt(_player.X, _player.Y);
-        }
-
+        } */
+        var playerPosition = _player!.Position;
+        _renderer.CameraLookAt(playerPosition.X, playerPosition.Y);
         _renderer.SetDrawColor(255, 255, 255, 255);
         _renderer.ClearScreen();
 
@@ -76,7 +77,7 @@ public class Engine
         }
 
         RenderTerrain();
-        RenderAllObjects(timeSinceLastFrame);
+        RenderAllObjects();
 
         _renderer.RenderUi(GetHotbarSlots());
 
@@ -99,7 +100,7 @@ public class Engine
         return _collisionObjects;
     }
     
-    public void RenderAllObjects(double timeSinceLastFrame)
+    public void RenderAllObjects()
     {
         List<int> itemsToRemove = new List<int>();
         foreach (var gameObject in GetRenderables())
@@ -124,32 +125,23 @@ public class Engine
         _player?.Render(_renderer);
     }
     
-    public void AddBomb(int screenX, int screenY)
+    private void AddBomb(int screenX, int screenY)
     {
         var worldCoords = _renderer.ToWorldCoordinates(screenX, screenY);
-        SpriteSheet spriteSheet = new(_renderer, Path.Combine("Assets", 
-            "BombExploding.png"), 1, 13, 32, 64, (16, 48));
-        spriteSheet.Animations["Explode"] = new SpriteSheet.Animation
-        {
-            StartFrame = (0, 0),
-            EndFrame = (0, 12),
-            DurationMs = 2000,
-            Loop 
-                = false
-        };
+        SpriteSheet spriteSheet = SpriteSheet.Load(_renderer, "BombExploding.json", 
+            "Assets");
         spriteSheet.ActivateAnimation("Explode");
         TemporaryGameObject bomb = new(spriteSheet, 2.1, (worldCoords.X, 
             worldCoords.Y));
         _gameObjects.Add(bomb.Id, bomb);
-        
     }
     
     
     public void SetupWorld()
     {
         
-        _player = new PlayerObject(_renderer);
-
+       // _player = new PlayerObject(_renderer);
+        _player = new(SpriteSheet.Load(_renderer, "Player.json", "Assets"), 100, 100);
         
         var levelContent = File.ReadAllText(Path.Combine("Assets", "terrain.tmj"));
         var level = JsonSerializer.Deserialize<Level>(levelContent);
@@ -297,10 +289,7 @@ public class Engine
     }
     
     
-    public void UpdatePlayerPosition(double up, double down, double left, double right, int timeSinceLastUpdateInMs)
-    {
-        _player?.UpdatePosition(up, down, left, right, timeSinceLastUpdateInMs, this); //sterg this daca vreau ca inainte
-    }
+    
     
     
 

@@ -1,0 +1,26 @@
+﻿{
+
+"rowCount": 9,
+"columnCount": 9,
+"frameWidth": 100,
+"frameHeight": 100,
+"frameCenter": {
+"offsetX": 50,
+"offsetY": 50
+},
+"fileName": "BombExploding.png",
+"animations": {
+"Explode": {
+  "startFrame": {
+    "row": 0,
+    "col": 0
+  },
+  "endFrame": {
+    "row": 8,
+    "col": 8
+  },
+  "durationMs": 2000,
+  "loop": false
+}
+}
+}

@@ -4,222 +4,72 @@ using Silk.NET.Maths;
 
 namespace TheAdventure.Models;
 
-public class PlayerObject : GameObject
+public class PlayerObject : RenderableGameObject
 {
-    public int X { get; set; } = 100;
-    public int Y { get; set; } = 100;
-
-    private Rectangle<int> _source;
-    private Rectangle<int> _target;
-
-    private readonly int _textureId;
-
-    private const int Speed = 128;
-
-    private const int FrameWidth = 24;
-    private const int FrameHeight = 24;
-
-    private int _currentFrame = 0;
-    private int _animationTimer = 0;
-    private const int FrameDuration = 100;
-
-    private AnimationState _currentState = AnimationState.Idle;
-
-    private enum AnimationState
+    private const int _speed = 128; // pixels per second
+    private string _currentAnimation = "IdleDown";
+    public PlayerObject(SpriteSheet spriteSheet, int x, int y) : 
+        base(spriteSheet, (x, y))
     {
-        Idle,
-        WalkLeft,
-        WalkRight,
-        Rear
+        SpriteSheet.ActivateAnimation(_currentAnimation);
     }
-
-    public PlayerObject(GameRenderer renderer) : base()
+    
+    public void UpdatePosition(double up, double down, double left, double right, 
+        int width, int height, double time, Engine engine)
     {
-        _textureId = renderer.LoadTexture(Path.Combine("Assets", "player.png"), out _);
-
-        if (_textureId < 0)
+        if (up + down + left + right == 0)
         {
-            throw new Exception("Failed to load player texture");
+            return;
         }
-
-        _source = new Rectangle<int>(0, 0, FrameWidth, FrameHeight);
-        _target = new Rectangle<int>(0, 0, FrameWidth, FrameHeight);
-
-        UpdateTarget();
-        UpdateSource();
-    }
-
-    public void UpdatePosition(double up, double down, double left, double right, int time, Engine engine)
-    {
-        var pixelsToMove = Speed * (time / 1000.0);
-        bool isMoving = false;
-
+        var pixelsToMove = _speed * (time / 1000.0);
+        var x = Position.X + (int)(right * pixelsToMove);
+        x -= (int)(left * pixelsToMove);
+        var y = Position.Y + (int)(down * pixelsToMove);
+        y -= (int)(up * pixelsToMove);
         
-        int newX = X;
-        int newY = Y;
-
-        if (left > 0)
+        var newAnimation = _currentAnimation;
+        if (y < Position.Y && _currentAnimation != "MoveUp")
         {
-            newX -= (int)(pixelsToMove * left);
-            _currentState = AnimationState.WalkLeft;
-            isMoving = true;
+            newAnimation = "MoveUp";
         }
-        else if (right > 0)
+        if (y > Position.Y && newAnimation != "MoveDown")
         {
-            newX += (int)(pixelsToMove * right);
-            _currentState = AnimationState.WalkRight;
-            isMoving = true;
+            newAnimation = "MoveDown";
         }
-
-        if (up > 0)
+        if (x < Position.X && newAnimation != "MoveLeft")
         {
-            newY -= (int)(pixelsToMove * up);
-            _currentState = AnimationState.Rear;
-            isMoving = true;
+            newAnimation = "MoveLeft";
         }
-
-        if (down > 0)
+        if (x > Position.X && newAnimation != "MoveRight")
         {
-            newY += (int)(pixelsToMove * down);
-            _currentState = AnimationState.Idle;
-            isMoving = true;
+            newAnimation = "MoveRight";
         }
-
-        if (!isMoving)
+        if (x == Position.X && y == Position.Y && newAnimation != "IdleDown")
         {
-            _currentState = AnimationState.Idle;
+            newAnimation = "IdleDown";
         }
-        var futureBounds = new Rectangle<int>(newX + 4, newY + 8, 16, 16);
+        if (newAnimation != _currentAnimation)
+        {
+            _currentAnimation = newAnimation;
+            SpriteSheet.ActivateAnimation(_currentAnimation);
+        }
+        var futureBounds = new Rectangle<int>(x, y, width, height);
 
         if (!engine.IsBlocked(futureBounds))
         {
-            X = newX;
-            Y = newY;
+            Position = (x, y);
         }
+
         
-        UpdateAnimation(time, isMoving);
-        UpdateTarget();
-        UpdateSource();
     }
-    public void UpdatePosition(double up, double down, double left, double right, int time)
-    {
-        var pixelsToMove = Speed * (time / 1000.0);
+   
 
-        bool isMoving = false;
-
-        if (left > 0)
-        {
-            X -= (int)(pixelsToMove * left);
-            _currentState = AnimationState.WalkLeft;
-            isMoving = true;
-        }
-        else if (right > 0)
-        {
-            X += (int)(pixelsToMove * right);
-            _currentState = AnimationState.WalkRight;
-            isMoving = true;
-        }
-
-        if (up > 0)
-        {
-            Y -= (int)(pixelsToMove * up);
-            _currentState = AnimationState.Rear;
-            isMoving = true;
-        }
-
-        if (down > 0)
-        {
-            Y += (int)(pixelsToMove * down);
-            isMoving = true;
-        }
-
-        if (!isMoving)
-        {
-            _currentState = AnimationState.Idle;
-        }
-
-        UpdateAnimation(time, isMoving);
-        UpdateTarget();
-        UpdateSource();
-    }
-
-    private void UpdateAnimation(int time, bool isMoving)
-    {
-        _animationTimer += time;
-
-        int startFrame = 0;
-        int endFrame = 0;
-
-        switch (_currentState)
-        {
-            case AnimationState.Idle:
-                startFrame = 0;
-                endFrame = 3;
-                break;
-
-            case AnimationState.WalkRight:
-                startFrame = 8;
-                endFrame = 11;
-                break;
-
-            case AnimationState.WalkLeft:
-                startFrame = 4;
-                endFrame = 7;
-                break;
-            case AnimationState.Rear:
-                startFrame = 12;
-                endFrame = 15;
-                break;
-        }
-
-        if (!isMoving && _currentState != AnimationState.Idle)
-        {
-            _currentFrame = startFrame;
-            return;
-        }
-
-        if (_currentFrame < startFrame || _currentFrame > endFrame)
-        {
-            _currentFrame = startFrame;
-        }
-
-        if (_animationTimer >= FrameDuration)
-        {
-            _animationTimer = 0;
-            _currentFrame++;
-
-            if (_currentFrame > endFrame)
-            {
-                _currentFrame = startFrame;
-            }
-        }
-    }
-
-    private void UpdateSource()
-    {
-        _source = new Rectangle<int>(
-            _currentFrame * FrameWidth,
-            0,
-            FrameWidth,
-            FrameHeight
-        );
-    }
+   
 
     
-    private void UpdateTarget()
-    {
-        _target = new Rectangle<int>(X, Y, FrameWidth , FrameHeight );
-    }
+    
 
-    public void Render(GameRenderer renderer)
-    {
-        renderer.RenderTexture(_textureId, _source, _target);
-    }
-    public Rectangle<int> CollisionBounds
-    {
-        get
-        {
-            return new Rectangle<int>(X , Y , 24, 24);
-        }
-    }
+    
+    public Rectangle<int> CollisionBounds => new(Position.X, Position.Y, 24, 24);
+
 }

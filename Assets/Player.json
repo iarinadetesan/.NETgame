@@ -1,0 +1,37 @@
+﻿{
+  "rowCount": 1,
+  "columnCount": 44,
+  "frameWidth": 24,
+  "frameHeight": 24,
+  "frameCenter": {
+    "offsetX": 0,
+    "offsetY": 0
+  },
+  "fileName": "player.png",
+  "animations": {
+    "IdleDown": {
+      "startFrame": { "row": 0, "col": 0 },
+      "endFrame": { "row": 0, "col": 3 },
+      "durationMs": 400,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": { "row": 0, "col": 4 },
+      "endFrame": { "row": 0, "col": 7 },
+      "durationMs": 400,
+      "loop": true
+    },
+    "MoveRight": {
+      "startFrame": { "row": 0, "col": 8 },
+      "endFrame": { "row": 0, "col": 11 },
+      "durationMs": 400,
+      "loop": true
+    },
+    "MoveUp": {
+      "startFrame": { "row": 0, "col": 12 },
+      "endFrame": { "row": 0, "col": 15 },
+      "durationMs": 400,
+      "loop": true
+    }
+  }
+}
