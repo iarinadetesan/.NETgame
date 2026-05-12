@@ -49,7 +49,7 @@ public class PlayerObject : GameObject
         UpdateSource();
     }
 
-    public void UpdatePosition(double up, double down, double left, double right, int time, GameLogic gameLogic)
+    public void UpdatePosition(double up, double down, double left, double right, int time, Engine engine)
     {
         var pixelsToMove = Speed * (time / 1000.0);
         bool isMoving = false;
@@ -91,7 +91,7 @@ public class PlayerObject : GameObject
         }
         var futureBounds = new Rectangle<int>(newX + 4, newY + 8, 16, 16);
 
-        if (!gameLogic.IsBlocked(futureBounds))
+        if (!engine.IsBlocked(futureBounds))
         {
             X = newX;
             Y = newY;

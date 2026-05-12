@@ -5,9 +5,9 @@ using TheAdventure.Models;
 using TheAdventure.Models.Data;
 namespace TheAdventure;
 
-public class GameLogic
+public class Engine
 {
-    
+    private Input _input;
     
     private Dictionary<int,GameObject> _gameObjects = new();
 
@@ -28,16 +28,32 @@ public class GameLogic
     
     private readonly GameRenderer _renderer;
     private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastUpdate;
 
 
-    public GameLogic(GameRenderer renderer)
+    public Engine(GameRenderer renderer, Input input)
     {
         _renderer = renderer;
+        _input = input;
+        _input.OnMouseClick += (_, coords) => AddBomb(coords.x, coords.y);
     }
 
     public void ProcessFrame()
     {
+        var currentTime = DateTimeOffset.Now;
+        var msSinceLastFrame=(currentTime - _lastUpdate).TotalMilliseconds;
+        _lastUpdate = currentTime;
         
+        double up = _input.IsWPressed() ? 1.0 : 0.0;
+        double down = _input.IsSPressed() ? 1.0 : 0.0;
+        double left = _input.IsAPressed() ? 1.0 : 0.0;
+        double right = _input.IsDPressed() ? 1.0 : 0.0;
+        _player?.UpdatePosition(up, down, left, right, (int)msSinceLastFrame);
+        
+        if (_input.IsEPressed())
+        {
+            TryCollectAtPlayer();
+        }
     }
     
     public void RenderFrame()
@@ -88,11 +104,8 @@ public class GameLogic
         List<int> itemsToRemove = new List<int>();
         foreach (var gameObject in GetRenderables())
         {
-            if (gameObject.Update(timeSinceLastFrame))
-            {
-                gameObject.Render(_renderer);
-            }
-            else
+            gameObject.Render(_renderer);
+            if (gameObject is TemporaryGameObject {IsExpired: true} tempGameObject)
             {
                 itemsToRemove.Add(gameObject.Id);
             }
@@ -111,23 +124,28 @@ public class GameLogic
         _player?.Render(_renderer);
     }
     
-    public void AddBomb(int x, int y)
+    public void AddBomb(int screenX, int screenY)
     {
-        AnimatedGameObject bomb = new AnimatedGameObject(
-            _renderer,
-            Path.Combine("Assets", "BombExploding.png"),
-            2, 
-            81, 
-            9, 
-            9, 
-            x, 
-            y);
+        var worldCoords = _renderer.ToWorldCoordinates(screenX, screenY);
+        SpriteSheet spriteSheet = new(_renderer, Path.Combine("Assets", 
+            "BombExploding.png"), 1, 13, 32, 64, (16, 48));
+        spriteSheet.Animations["Explode"] = new SpriteSheet.Animation
+        {
+            StartFrame = (0, 0),
+            EndFrame = (0, 12),
+            DurationMs = 2000,
+            Loop 
+                = false
+        };
+        spriteSheet.ActivateAnimation("Explode");
+        TemporaryGameObject bomb = new(spriteSheet, 2.1, (worldCoords.X, 
+            worldCoords.Y));
         _gameObjects.Add(bomb.Id, bomb);
         
     }
     
     
-    public void InitializeGame()
+    public void SetupWorld()
     {
         
         _player = new PlayerObject(_renderer);

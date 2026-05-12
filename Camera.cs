@@ -3,7 +3,7 @@
 namespace TheAdventure;
 
 
-public class GameCamera
+public class Camera
 {
     private int _x;
     private int _y;
@@ -17,7 +17,7 @@ public class GameCamera
     public int Height { get;  }
 
     public float Zoom { get; set; } = 1.0f;
-public GameCamera(int width, int height)
+public Camera(int width, int height)
 {
     Width = width;
     Height = height;

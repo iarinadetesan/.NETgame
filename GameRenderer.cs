@@ -23,7 +23,7 @@ public class GameRenderer
     
     private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
     
-    private readonly GameCamera _camera ;
+    private readonly Camera _camera ;
     
     
     private readonly Dictionary<string, int> _uiItemTextures = new();
@@ -49,7 +49,7 @@ public class GameRenderer
         
         var windowSize = gameWindow.Size;
 
-        _camera = new GameCamera(windowSize.Width, windowSize.Height);
+        _camera = new Camera(windowSize.Width, windowSize.Height);
         _camera.Zoom = _zoomLevels[_zoomLevelIndex];
         _camera.LookAt(0, 0);
 

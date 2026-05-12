@@ -27,51 +27,51 @@ public static class Program
         }
 
         using var gameWindow = new GameWindow(sdl);
-
-        
-        var gameRenderer = new GameRenderer(sdl, gameWindow);
-        var gameLogic = new GameLogic(gameRenderer);
-        var inputLogic = new InputLogic(sdl, gameLogic, gameRenderer);
-
-
-        gameLogic.InitializeGame();
-        
-        
-
-
-        bool quit = false;
-
-        while (!quit)
         {
-            quit = inputLogic.ProcessInput();
             
-            if (inputLogic.ZoomInRequested)
+            var input = new Input(sdl);
+            var gameRenderer = new GameRenderer(sdl, gameWindow);
+            var engine = new Engine(gameRenderer, input);
+
+
+            engine.SetupWorld();
+
+
+
+
+            bool quit = false;
+
+            while (!quit)
             {
-                gameRenderer.ZoomIn();
+                quit = input.ProcessInput();
+
+                if (input.ZoomInRequested)
+                {
+                    gameRenderer.ZoomIn();
+                }
+
+                if (input.ZoomOutRequested)
+                {
+                    gameRenderer.ZoomOut();
+                }
+
+
+                if (quit)
+                    break;
+
+                engine.ProcessFrame();
+
+                gameRenderer.SetSelectedHotbarIndex(input.SelectedHotbarIndex);
+
+                engine.RenderFrame();
+
+
+
+
+                System.Threading.Thread.Sleep(13);
             }
 
-            if (inputLogic.ZoomOutRequested)
-            {
-                gameRenderer.ZoomOut();
-            }
-            
-            
-            if (quit)
-                break;
-            
-            gameLogic.ProcessFrame(); 
-            
-            gameRenderer.SetSelectedHotbarIndex(inputLogic.SelectedHotbarIndex);
-            
-            gameLogic.RenderFrame();
-
-            
-            
-            
-            System.Threading.Thread.Sleep(13);
         }
-
-        
         sdl.Quit();
     }
 }

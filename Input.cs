@@ -2,14 +2,57 @@
 
 namespace TheAdventure;
 
-public class InputLogic
+public unsafe class Input
 {
     private readonly Sdl _sdl;
-    private readonly GameLogic _gameLogic;
-    private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
-    private int mouseX;
-    private int mouseY;
+   // private readonly Engine _engine;
+    //private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
+    //private int mouseX;
+    //private int mouseY;
+   
+    public EventHandler<(int x, int y)>? OnMouseClick;
+    public Input(Sdl sdl)
+    {
+        _sdl 
+            = sdl;
+    }
+    public bool IsAPressed()
+    {
+        ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null), 
+            (int)KeyCode.Count);
+        return keyboardState[(int)KeyCode.A] == 1;
+    }
+    public bool IsDPressed() { 
+        ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null), 
+            (int)KeyCode.Count);
+        return keyboardState[(int)KeyCode.D] == 1; }
+    public bool IsWPressed()    { 
+        ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null), 
+            (int)KeyCode.Count);
+        return keyboardState[(int)KeyCode.W] == 1;}
+    public bool IsSPressed()  { 
+        ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null), 
+            (int)KeyCode.Count);
+        return keyboardState[(int)KeyCode.S] == 1; }
     
+    
+    public bool IsEPressed() => IsPressed(KeyCode.E);
+
+    private unsafe bool IsPressed(KeyCode key)
+    {
+        ReadOnlySpan<byte> keyboardState = new(_sdl.GetKeyboardState(null), (int)KeyCode.Count);
+        return keyboardState[(int)key] == 1;
+    }
+
+    
+    /*case (uint)EventType.Mousebuttondown:
+    {
+        if (ev.Button.Button == (byte)MouseButton.Primary)
+        {
+            OnMouseClick?.Invoke(this, (ev.Button.X, ev.Button.Y));
+        }
+        break;
+    }*/
     public bool ZoomInRequested { get; private set; }
     public bool ZoomOutRequested { get; private set; }
     
@@ -21,12 +64,7 @@ public class InputLogic
     private readonly GameRenderer _gameRenderer;
     
     
-    public InputLogic(Sdl sdl, GameLogic gameLogic, GameRenderer gameRenderer)
-    {
-        _sdl = sdl;
-        _gameLogic = gameLogic;
-        _gameRenderer = gameRenderer;
-    }
+    
     public unsafe bool ProcessInput()
     {
         ZoomInRequested = false;
@@ -115,22 +153,11 @@ public class InputLogic
                     case (uint)EventType.Mousebuttondown:
                     {
                         
-                        mouseX = ev.Button.X;
-                        mouseY = ev.Button.Y;
-                        mouseButtonStates[ev.Button.Button] = 1;
-
-                        if (_gameRenderer.IsZoomInButtonClicked(mouseX, mouseY))
-                        {
-                            ZoomInRequested = true;
-                            break;
-                        }
-
-                        if (_gameRenderer.IsZoomOutButtonClicked(mouseX, mouseY))
-                        {
-                            ZoomOutRequested = true;
-                            break;
-                        }
                         
+                        if (ev.Button.Button == (byte)MouseButton.Primary)
+                        {
+                            OnMouseClick?.Invoke(this, (ev.Button.X, ev.Button.Y));
+                        }
                         break;
                     }
 
@@ -174,68 +201,15 @@ public class InputLogic
                 }
                
             }
-            var currentTime = DateTimeOffset.Now;
-            var timeSinceLastFrame = (int)currentTime.Subtract(_lastUpdate).TotalMilliseconds;
-            _lastUpdate = currentTime;
-            var up = 0.0;
-            var down = 0.0;
-            var left = 0.0;
-            var right = 0.0;
-
-            if (keyboardState[(int)KeyCode.W] == 1)
-            {
-                up = 1.0;
-            }
-
-            if (keyboardState[(int)KeyCode.S] == 1)
-            {
-                down = 1.0;
-            }
-
-            if (keyboardState[(int)KeyCode.A] == 1)
-            {
-                left = 1.0;
-            }
-
-            if (keyboardState[(int)KeyCode.D] == 1)
-            {
-                right = 1.0;
-            }
-            if (keyboardState[(int)KeyCode.E] == 1)
-            {
-                //Console.WriteLine("trying collect");
-                _gameLogic.TryCollectAtPlayer();
-                
-            }
-            if (keyboardState[(int)KeyCode.One] == 1)
-            {
-                _selectedHotbarIndex = 0;
-            }
-            if (keyboardState[(int)KeyCode.Two] == 1)
-            {
-                _selectedHotbarIndex = 1;
-            }
-            if (keyboardState[(int)KeyCode.Three] == 1)
-            {
-                _selectedHotbarIndex = 2;
-            }
-            if (keyboardState[(int)KeyCode.Four] == 1)
-            {
-                _selectedHotbarIndex = 3;
-            }
-            if (keyboardState[(int)KeyCode.Five] == 1)
-            {
-                _selectedHotbarIndex = 4;
-            }
-            _gameLogic.UpdatePlayerPosition(up, down, left, right, timeSinceLastFrame);
             
          /* nu mai vreau sa adaug bombe
           if (mouseButtonStates[(byte)MouseButton.Primary] == 1)
             {
                 var worldCoords = GameRenderer.ToWorldCoordinates(mouseX, mouseY);
-                _gameLogic.AddBomb(worldCoords.X, worldCoords.Y);
+                _engine.AddBomb(worldCoords.X, worldCoords.Y);
             }*/
             return false;
         
     }
 }
+

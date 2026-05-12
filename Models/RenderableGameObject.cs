@@ -12,22 +12,29 @@ public class RenderableGameObject : GameObject
     public Rectangle<int> TextureDestination { get; set; }
     public TextureData TextureInformation { get; }
     
-    public RenderableGameObject(GameRenderer renderer, string fileName) : base()
-    {
-        TextureId = renderer.LoadTexture(fileName, out var textureData);
+    
+    public SpriteSheet SpriteSheet { get; set; }
+    public (int X, int Y) Position { get; set; }
+    public double Angle { get; set; }
+    public Point RotationCenter { get; set; }
 
-        TextureInformation = textureData;
-        TextureSource = new Rectangle<int>(0, 0, textureData.Width, textureData.Height);
-        TextureDestination = new Rectangle<int>(0, 0, textureData.Width, textureData.Height);
+
+    public RenderableGameObject(SpriteSheet spriteSheet, (int X, int Y)
+            position, double angle = 0.0,
+        Point rotationCenter = new())
+        :
+        base()
+    {
+
+        SpriteSheet = spriteSheet;
+        Position = position;
+        Angle = angle;
+        RotationCenter = rotationCenter;
     }
+
     public virtual void Render(GameRenderer renderer)
     {
-        renderer.RenderTexture(TextureId, TextureSource, TextureDestination);
+        SpriteSheet.Render(renderer, Position, Angle, RotationCenter);
     }
 
-
-    public virtual bool Update(double timeSinceLastFrame)
-    {
-        return true; // base implementation: always alive
-    }
 }
