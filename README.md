@@ -8,7 +8,14 @@ Cats, dogs, bunnies, and foxes move independently in random directions. Each
 species has a different movement speed and score value. Apples, coins, and gems
 also appear on the map and provide immediate bonuses.
 
-<!-- Add a gameplay screenshot here before submission. -->
+
+
+
+https://github.com/user-attachments/assets/e51d20a9-130b-407e-9cde-2f97582565fa
+
+
+
+
 
 ## Objective
 
