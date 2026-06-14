@@ -9,9 +9,7 @@ public static class Program
     public static void Main()
     {
         var sdl = new Sdl(new SdlContext());
-
         
-
         var sdlInitResult = sdl.Init(
             Sdl.InitVideo |
             Sdl.InitAudio |
@@ -31,14 +29,12 @@ public static class Program
         {
             
             var input = new Input(sdl);
-            var gameRenderer = new GameRenderer(sdl, gameWindow);
+            using var gameRenderer = new GameRenderer(sdl, gameWindow);
             var engine = new Engine(gameRenderer, input);
 
 
             engine.SetupWorld();
-
-
-
+            
 
             bool quit = false;
 
@@ -46,34 +42,16 @@ public static class Program
             {
                 quit = input.ProcessInput();
 
-                if (input.ZoomInRequested)
-                {
-                    gameRenderer.ZoomIn();
-                }
-
-                if (input.ZoomOutRequested)
-                {
-                    gameRenderer.ZoomOut();
-                }
-
-
                 if (quit)
                 {
                     engine.SaveGame();
                     break;
                 }
-                    
-                    
-
+                
                 engine.ProcessFrame();
 
-                gameRenderer.SetSelectedHotbarIndex(input.SelectedHotbarIndex);
-
                 engine.RenderFrame();
-
-
-
-
+                
                 System.Threading.Thread.Sleep(13);
             }
             

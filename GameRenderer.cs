@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
+using FontStashSharp;
 using Silk.NET.Maths;
 using Silk.NET.SDL;
 using SixLabors.ImageSharp;
@@ -9,7 +11,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using TheAdventure.Models;
 
 namespace TheAdventure;
-public class GameRenderer
+public class GameRenderer : IDisposable
 {
     
     private readonly Sdl _sdl;
@@ -19,27 +21,22 @@ public class GameRenderer
     
     private readonly Dictionary<int, IntPtr> _texturePointers = new();
     private readonly Dictionary<int, TextureData> _textureInformation = new();
+    private readonly Dictionary<string, int> _textureIdsByPath =
+        new(StringComparer.OrdinalIgnoreCase);
     private int _index = 0;
     
     private DateTimeOffset _lastFrameRenderedAt = DateTimeOffset.MinValue;
     
     private readonly Camera _camera ;
-    
-    
-    private readonly Dictionary<string, int> _uiItemTextures = new();
-    
-    
-    private readonly int _hotbarTextureId;
-    private readonly TextureData _hotbarTextureData;
-    private int _selectedHotbarIndex = 0;
-    
-    private Silk.NET.Maths.Rectangle<int> _zoomInButton = new(700, 20, 40, 40);
-    private Silk.NET.Maths.Rectangle<int> _zoomOutButton = new(750, 20, 40, 40);
 
-    private readonly int _zoomButtonsTextureId;
-    private readonly TextureData _zoomButtonsTextureData;
-    private readonly float[] _zoomLevels = { 1.0f, 2.0f, 3.0f , 4.0f};
-    private int _zoomLevelIndex = 0;
+    private readonly int _playButtonTextureId;
+    private readonly TextureData _playButtonTextureData;
+    private readonly Rectangle<int> _playButtonBounds;
+    private readonly Rectangle<int> _retryButtonBounds;
+
+    private readonly FontSystem _fontSystem;
+    private readonly SdlFontRenderer _fontRenderer;
+    private bool _disposed;
     
     public GameRenderer(Sdl sdl, GameWindow gameWindow)
     {
@@ -50,21 +47,70 @@ public class GameRenderer
         var windowSize = gameWindow.Size;
 
         _camera = new Camera(windowSize.Width, windowSize.Height);
-        _camera.Zoom = _zoomLevels[_zoomLevelIndex];
         _camera.LookAt(0, 0);
 
+        _playButtonTextureId = LoadTexture(
+            Path.Combine(
+                "Assets",
+                "Sprout Lands - UI Pack - Basic pack",
+                "Sprite sheets",
+                "UI Big Play Button.png"
+            ),
+            out _playButtonTextureData
+        );
+        // AI-generated
+        const int playButtonWidth = 288;
+        const int playButtonHeight = 96;
+        _playButtonBounds = new Rectangle<int>(
+            (_camera.Width - playButtonWidth) / 2,
+            (_camera.Height - playButtonHeight) / 2,
+            playButtonWidth,
+            playButtonHeight
+        );
+        _retryButtonBounds = new Rectangle<int>(
+            (_camera.Width - 216) / 2,
+            _camera.Height - 88,
+            216,
+            72
+        );
 
-        
-        _hotbarTextureId = LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _hotbarTextureData);
-        _zoomButtonsTextureId =
-            LoadTexture(Path.Combine("Assets", "Sprite sheet for Basic Pack.png"), out _zoomButtonsTextureData);
+        unsafe
+        {
+            _fontRenderer = new SdlFontRenderer(sdl, (Renderer*)_renderer);
+        }
+
+        _fontSystem = new FontSystem(new FontSystemSettings
+        {
+            FontResolutionFactor = 1,
+            KernelWidth = 1,
+            KernelHeight = 1
+        });
+        _fontSystem.AddFont(File.ReadAllBytes(Path.Combine(
+            "Assets",
+            "Sprout Lands - UI Pack - Basic pack",
+            "fonts",
+            "pixelFont-7-8x14-sproutLands.ttf"
+        )));
+        // end AI-generated
     }
    
     
     public unsafe int LoadTexture(string fileName, out TextureData textureData)
 
     {
-        using var fStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+        string fullPath = Path.GetFullPath(fileName);
+        if (_textureIdsByPath.TryGetValue(fullPath, out int existingId))
+        {
+            textureData = _textureInformation[existingId];
+            return existingId;
+        }
+
+        using var fStream = new FileStream(
+            fullPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read
+        );
         using var image = Image.Load<Rgba32>(fStream);
         
         textureData = new TextureData()
@@ -86,11 +132,12 @@ public class GameRenderer
                 textureData.Width * 4, 
                 (uint)PixelFormatEnum.Rgba32);
             imageTexture = _sdl.CreateTextureFromSurface((Renderer*)_renderer, imageSurface);
-            _sdl.FreeSurface(imageSurface); // surface is only needed to create the texture, free it immediately
+            _sdl.FreeSurface(imageSurface);
         }
 
         _texturePointers[_index] = (IntPtr)imageTexture;
         _textureInformation[_index] = textureData;
+        _textureIdsByPath[fullPath] = _index;
         return _index++;
     }
     
@@ -114,16 +161,105 @@ public class GameRenderer
         _camera.LookAt(x, y);
     }
 
-    public void RenderUi(List<HotbarSlot> slots)
+    public void RenderMainMenu()
     {
-        RenderHotbar(slots);
-        RenderZoomButtons();
+        RenderCenteredText("ANIMAL RESCUE", 120, 3);
+        RenderCenteredText("Oh, no! Pets are on the loose!", 180, 2);
+        RenderCenteredText("Let's bring them back to their owners!", 220, 2);
+        RenderPlayButton(_playButtonBounds);
     }
 
+    private void RenderPlayButton(Rectangle<int> bounds)
+    {
+        int frameWidth = _playButtonTextureData.Width / 2;
+        int frameHeight = _playButtonTextureData.Height / 2;
+        var playButtonSource = new Rectangle<int>(
+            0,
+            frameHeight,
+            frameWidth,
+            frameHeight
+        );
 
-    
+        RenderUiTexture(
+            _playButtonTextureId,
+            playButtonSource,
+            bounds
+        );
+    }
 
-    
+    public bool IsPlayButtonClicked(int mouseX, int mouseY)
+    {
+        return PointInRect(mouseX, mouseY, _playButtonBounds);
+    }
+
+    public void RenderGameStatus(
+        int secondsRemaining,
+        int score,
+        int money,
+        double speedBoostRemainingSeconds)
+    {
+        RenderText($"TIME {secondsRemaining}", 20, 20, 2);
+        RenderText($"SCORE {score}", 20, 52, 2);
+        RenderText($"MONEY {money}", 20, 84, 2);
+
+        if (speedBoostRemainingSeconds > 0)
+        {
+            int boostSeconds = (int)Math.Ceiling(speedBoostRemainingSeconds);
+            RenderText($"SPEED BOOST {boostSeconds}", 20, 116, 2);
+        }
+    }
+
+    public void RenderGameOver(
+        int score,
+        int highScore,
+        int totalCaught,
+        int foxesCaught,
+        int dogsCaught,
+        int catsCaught,
+        int bunniesCaught,
+        int money)
+    {
+        RenderCenteredText("GAME OVER", 80, 4);
+        RenderCenteredText($"SCORE {score}", 160, 3);
+        RenderCenteredText($"HIGH SCORE {highScore}", 205, 3);
+        RenderCenteredText($"TOTAL CAUGHT {totalCaught}", 275, 2);
+        RenderCenteredText($"FOXES {foxesCaught}", 325, 2);
+        RenderCenteredText($"DOGS {dogsCaught}", 365, 2);
+        RenderCenteredText($"CATS {catsCaught}", 405, 2);
+        RenderCenteredText($"BUNNIES {bunniesCaught}", 445, 2);
+        RenderCenteredText($"MONEY {money}", 485, 2);
+        
+        RenderPlayButton(_retryButtonBounds);
+    }
+
+    public bool IsRetryButtonClicked(int mouseX, int mouseY)
+    {
+        return PointInRect(mouseX, mouseY, _retryButtonBounds);
+    }
+
+    public void RenderText(string text, int x, int y, int scale = 2)
+    {
+        var font = _fontSystem.GetFont(14 * scale);
+        font.DrawText(
+            _fontRenderer,
+            text,
+            new Vector2(x, y),
+            FSColor.Black
+        );
+    }
+
+    private void RenderCenteredText(string text, int y, int scale)
+    {
+        var font = _fontSystem.GetFont(14 * scale);
+        var size = font.MeasureString(text);
+        int x = (int)MathF.Round((_camera.Width - size.X) / 2.0f);
+        font.DrawText(
+            _fontRenderer,
+            text,
+            new Vector2(x, y),
+            FSColor.Black
+        );
+    }
     
     
     public unsafe void RenderTexture(
@@ -150,21 +286,6 @@ public class GameRenderer
         }
     }
 
-    
-    public (int X, int Y) ToWorldCoordinates(int x, int y)
-    {
-        var worldCoords = _camera.ToWorldCoordinates(new(x, y));
-        return (worldCoords.X, worldCoords.Y);
-    }
-
-    public unsafe void RenderDebugRect(Rectangle<int> rect, byte r, byte g, byte b)
-    {
-        var translated = _camera.ToScreenCoordinates(rect);
-
-        _sdl.SetRenderDrawColor((Renderer*)_renderer, r, g, b, 255);
-        _sdl.RenderDrawRect((Renderer*)_renderer, translated);
-    }
-    
     public unsafe void RenderUiTexture(int textureId, Rectangle<int> src, Rectangle<int> dst)
     {
         if (_texturePointers.TryGetValue(textureId, out var texture))
@@ -172,142 +293,6 @@ public class GameRenderer
             _sdl.RenderCopy((Renderer*)_renderer, (Texture*)texture, in src, in dst);
         }
     }
-    
-    private int GetUiTextureForItem(string itemType)
-    {
-        if (_uiItemTextures.TryGetValue(itemType, out var textureId))
-        {
-            return textureId;
-        }
-
-        string texturePath = itemType switch
-        {
-            
-            "Apple" => "apple.png",
-            "Gem" => "gem.png",
-            "Coin" => "coin.png",
-            _ => ""
-        };
-
-        if (string.IsNullOrWhiteSpace(texturePath))
-        {
-            return -1;
-        }
-
-        textureId = LoadTexture(Path.Combine("Assets", texturePath), out _);
-        
-        _uiItemTextures[itemType] = textureId;
-        return textureId;
-    }
-    
-    private unsafe void RenderZoomButtons()
-    {
-        var zoomInSrc = new Silk.NET.Maths.Rectangle<int>(837, 130, 30, 30);
-        var zoomOutSrc = new Silk.NET.Maths.Rectangle<int>(837, 160, 30, 30);
-
-        RenderUiTexture(_zoomButtonsTextureId, zoomInSrc, _zoomInButton);
-        RenderUiTexture(_zoomButtonsTextureId, zoomOutSrc, _zoomOutButton);
-    }
- 
-    private unsafe void DrawCountBars(int count, int slotX, int slotY, int slotSize)
-    {
-        var renderer = (Renderer*)_renderer;
-
-        int barsToDraw = Math.Min(count, 5);
-
-        for (int i = 0; i < barsToDraw; i++)
-        {
-            var barRect = new Silk.NET.Maths.Rectangle<int>(
-                slotX + 6 + i * 7,
-                slotY + slotSize - 10,
-                5,
-                4
-            );
-
-            _sdl.SetRenderDrawColor(renderer, 255, 215, 0, 255);
-            _sdl.RenderFillRect(renderer, barRect);
-        }
-    }
-    
-    public void SetSelectedHotbarIndex(int index)
-    {
-        if (index < 0 || index > 4)
-        {
-            return;
-        }
-
-        _selectedHotbarIndex = index;
-    }
-    
-    private unsafe void RenderHotbar(List<HotbarSlot> slots)
-    {
-        const int slotCount = 5;
-        const int uiSlotSize = 48;
-        const int renderSlotSize = 64;
-        const int spacing = -10;
-        const int bottomMargin = 20;
-
-        int totalWidth = slotCount * renderSlotSize + (slotCount - 1) * spacing;
-        int startX = (_camera.Width - totalWidth) / 2;
-        int y = _camera.Height - renderSlotSize - bottomMargin;
-        
-
-        for (int i = 0; i < slotCount; i++)
-        {
-            int slotX = startX + i * (renderSlotSize + spacing);
-
-            var slotSrc = i == _selectedHotbarIndex
-                ? new Silk.NET.Maths.Rectangle<int>(48, 0, 48, 48)
-                : new Silk.NET.Maths.Rectangle<int>(0, 0, 48, 48);
-
-            var slotDst = new Silk.NET.Maths.Rectangle<int>(slotX, y, renderSlotSize, renderSlotSize);
-
-            RenderUiTexture(_hotbarTextureId, slotSrc, slotDst);
-
-            var slot = slots[i];
-            if (!string.IsNullOrWhiteSpace(slot.ItemType) && slot.Count > 0)
-            {
-                int itemTextureId = GetUiTextureForItem(slot.ItemType);
-                if (itemTextureId != -1)
-                {
-                    var itemSrc = new Silk.NET.Maths.Rectangle<int>(0, 0, 16, 16);
-                    var itemDst = new Silk.NET.Maths.Rectangle<int>(slotX + 16, y + 16, 32, 32);
-                    RenderUiTexture(itemTextureId, itemSrc, itemDst);
-                }
-
-                DrawCountBars(slot.Count, slotX, y, renderSlotSize);
-            }
-        }
-    }
-    
-    public void ZoomIn()
-    {
-        if (_zoomLevelIndex < _zoomLevels.Length - 1)
-        {
-            _zoomLevelIndex++;
-            _camera.Zoom = _zoomLevels[_zoomLevelIndex];
-        }
-    }
-
-    public void ZoomOut()
-    {
-        if (_zoomLevelIndex > 0)
-        {
-            _zoomLevelIndex--;
-            _camera.Zoom = _zoomLevels[_zoomLevelIndex];
-        }
-    }
-    
-    public bool IsZoomInButtonClicked(int mouseX, int mouseY)
-    {
-        return PointInRect(mouseX, mouseY, _zoomInButton);
-    }
-
-    public bool IsZoomOutButtonClicked(int mouseX, int mouseY)
-    {
-        return PointInRect(mouseX, mouseY, _zoomOutButton);
-    }
-
     private bool PointInRect(int x, int y, Silk.NET.Maths.Rectangle<int> rect)
     {
         return x >= rect.Origin.X &&
@@ -319,5 +304,35 @@ public class GameRenderer
     {
         _camera.SetWorldBounds(bounds);
     }
+// AI-generated
+    public unsafe void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
 
+        _fontRenderer.Dispose();
+
+        foreach (var texture in _texturePointers.Values)
+        {
+            if (texture != IntPtr.Zero)
+            {
+                _sdl.DestroyTexture((Texture*)texture);
+            }
+        }
+
+        _texturePointers.Clear();
+        _textureInformation.Clear();
+        _textureIdsByPath.Clear();
+
+        if (_renderer != IntPtr.Zero)
+        {
+            _sdl.DestroyRenderer((Renderer*)_renderer);
+        }
+
+        _disposed = true;
+        GC.SuppressFinalize(this);
+    }
+    // end AI-generated
 }

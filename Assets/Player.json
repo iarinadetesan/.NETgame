@@ -3,6 +3,8 @@
   "columnCount": 44,
   "frameWidth": 24,
   "frameHeight": 24,
+  "renderWidth": 32,
+  "renderHeight": 32,
   "frameCenter": {
     "offsetX": 0,
     "offsetY": 0

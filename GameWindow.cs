@@ -26,7 +26,7 @@ public class GameWindow : IDisposable
         unsafe
         {
             _window = (IntPtr)sdl.CreateWindow(
-                "The Adventure", Sdl.WindowposUndefined, Sdl.WindowposUndefined, 860, 640,
+                "Animal Rescue", Sdl.WindowposUndefined, Sdl.WindowposUndefined, 860, 640,
                 (uint)WindowFlags.Resizable | (uint)WindowFlags.AllowHighdpi
             );
             if (_window == IntPtr.Zero)

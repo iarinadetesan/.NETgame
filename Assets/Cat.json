@@ -1,0 +1,27 @@
+{
+  "rowCount": 106,
+  "columnCount": 11,
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "renderWidth": 32,
+  "renderHeight": 32,
+  "frameCenter": {
+    "offsetX": 2,
+    "offsetY": 4
+  },
+  "fileName": "Free pack Cats/cat 1.9.png",
+  "animations": {
+    "MoveRight": {
+      "startFrame": { "row": 6, "col": 0 },
+      "endFrame": { "row": 6, "col": 7 },
+      "durationMs": 700,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": { "row": 7, "col": 0 },
+      "endFrame": { "row": 7, "col": 7 },
+      "durationMs": 700,
+      "loop": true
+    }
+  }
+}

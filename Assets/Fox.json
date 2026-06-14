@@ -1,0 +1,28 @@
+{
+  "rowCount": 7,
+  "columnCount": 14,
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "renderWidth": 32,
+  "renderHeight": 32,
+  "frameCenter": {
+    "offsetX": 4,
+    "offsetY": 8
+  },
+  "fileName": "Fox Sprite Sheet.png",
+  "animations": {
+    "MoveRight": {
+      "startFrame": { "row": 1, "col": 0 },
+      "endFrame": { "row": 1, "col": 13 },
+      "durationMs": 900,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": { "row": 1, "col": 0 },
+      "endFrame": { "row": 1, "col": 13 },
+      "flip": 1,
+      "durationMs": 900,
+      "loop": true
+    }
+  }
+}

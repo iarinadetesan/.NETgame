@@ -1,0 +1,28 @@
+{
+  "rowCount": 34,
+  "columnCount": 11,
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "renderWidth": 32,
+  "renderHeight": 32,
+  "frameCenter": {
+    "offsetX": 2,
+    "offsetY": 4
+  },
+  "fileName": "Bunny/Bunny 1 16x16 animation.png",
+  "animations": {
+    "MoveRight": {
+      "startFrame": { "row": 4, "col": 0 },
+      "endFrame": { "row": 4, "col": 5 },
+      "durationMs": 600,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": { "row": 4, "col": 0 },
+      "endFrame": { "row": 4, "col": 5 },
+      "flip": 1,
+      "durationMs": 600,
+      "loop": true
+    }
+  }
+}

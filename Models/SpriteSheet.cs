@@ -31,6 +31,10 @@ public class SpriteSheet
     public int ColumnCount { get; set; }
     public int FrameWidth { get; set; }
     public int FrameHeight { get; set; }
+    
+    public int? RenderWidth { get; set; }
+    public int? RenderHeight { get; set; }
+   
     public Offset FrameCenter { get; set; }
     public Animation? ActiveAnimation { get; private set; }
     public Dictionary<string, Animation> Animations { get; set; } = new();
@@ -86,12 +90,17 @@ public class SpriteSheet
     public void Render(GameRenderer renderer, (int X, int Y) dest, double angle = 
         0.0, Point rotationCenter = new())
     {
+        
+        int renderWidth = RenderWidth ?? FrameWidth;
+        int renderHeight = RenderHeight ?? FrameHeight;
+        
+
         if (ActiveAnimation == null)
         {
             renderer.RenderTexture(_textureId, new Rectangle<int>(0, 0, FrameWidth, 
                     FrameHeight),
                 new Rectangle<int>(dest.X - FrameCenter.OffsetX, dest.Y - 
-                                                                 FrameCenter.OffsetY, FrameWidth, FrameHeight),
+                                                                 FrameCenter.OffsetY, renderWidth, renderHeight),
                 RendererFlip.None, angle, rotationCenter);
         }
         else
@@ -123,7 +132,7 @@ public class SpriteSheet
                 new Rectangle<int>(currentCol * FrameWidth, currentRow * 
                                                             FrameHeight, FrameWidth, FrameHeight),
                 new Rectangle<int>(dest.X - FrameCenter.OffsetX, dest.Y - 
-                                                                 FrameCenter.OffsetY, FrameWidth, FrameHeight),
+                                                                 FrameCenter.OffsetY, renderWidth, renderHeight),
                 ActiveAnimation.Flip, angle, rotationCenter);
         }
     }

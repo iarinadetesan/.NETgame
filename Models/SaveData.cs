@@ -4,7 +4,8 @@ namespace TheAdventure.Models;
 
 public class SaveData
 {
-    public Dictionary<string, int> Inventory { get; set; } = new();
+    public int HighScore { get; set; }
+    public int Money { get; set; }
 
     public static SaveData Load(string path)
     {

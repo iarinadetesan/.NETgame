@@ -1,0 +1,28 @@
+{
+  "rowCount": 1,
+  "columnCount": 8,
+  "frameWidth": 48,
+  "frameHeight": 32,
+  "renderWidth": 48,
+  "renderHeight": 32,
+  "frameCenter": {
+    "offsetX": 4,
+    "offsetY": 8
+  },
+  "fileName": "Dog Sprites!/Dog 1 - Beagle/Walk/dog_1_walk_sheet.png",
+  "animations": {
+    "MoveRight": {
+      "startFrame": { "row": 0, "col": 0 },
+      "endFrame": { "row": 0, "col": 7 },
+      "durationMs": 650,
+      "loop": true
+    },
+    "MoveLeft": {
+      "startFrame": { "row": 0, "col": 0 },
+      "endFrame": { "row": 0, "col": 7 },
+      "flip": 1,
+      "durationMs": 650,
+      "loop": true
+    }
+  }
+}

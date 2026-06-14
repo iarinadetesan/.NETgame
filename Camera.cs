@@ -16,7 +16,6 @@ public class Camera
     public int Width { get;  }
     public int Height { get;  }
 
-    public float Zoom { get; set; } = 1.0f;
 public Camera(int width, int height)
 {
     Width = width;
@@ -58,25 +57,14 @@ public void SetWorldBounds(Rectangle<int> bounds)
 
     public Rectangle<int> ToScreenCoordinates(Rectangle<int> rect)
     {
-        float screenX = Width / 2f + (rect.Origin.X - X) * Zoom;
-        float screenY = Height / 2f + (rect.Origin.Y - Y) * Zoom;
+        int screenX = Width / 2 + rect.Origin.X - X;
+        int screenY = Height / 2 + rect.Origin.Y - Y;
 
         return new Rectangle<int>(
-            (int)MathF.Round(screenX),
-            (int)MathF.Round(screenY),
-            (int)MathF.Round(rect.Size.X * Zoom),
-            (int)MathF.Round(rect.Size.Y * Zoom)
-        );
-    }
-
-    public Vector2D<int> ToWorldCoordinates(Vector2D<int> point)
-    {
-        float worldX = (point.X - Width / 2f) / Zoom + X;
-        float worldY = (point.Y - Height / 2f) / Zoom + Y;
-
-        return new Vector2D<int>(
-            (int)MathF.Round(worldX),
-            (int)MathF.Round(worldY)
+            screenX,
+            screenY,
+            rect.Size.X,
+            rect.Size.Y
         );
     }
 }

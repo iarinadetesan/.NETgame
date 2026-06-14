@@ -10,8 +10,8 @@ public class CollectibleObject : GameObject
     public string ItemType { get; }
     public bool IsCollected { get; private set; }
 
-    public int X { get; }
-    public int Y { get; }
+    public int X { get; private set; }
+    public int Y { get; private set; }
 
     private readonly int _textureId;
     private readonly Rectangle<int> _source;
@@ -40,6 +40,19 @@ public class CollectibleObject : GameObject
     public void Collect()
     {
         IsCollected = true;
+    }
+
+    public void Deactivate()
+    {
+        IsCollected = true;
+    }
+
+    public void ResetPosition(int x, int y)
+    {
+        X = x;
+        Y = y;
+        _target = new Rectangle<int>(X, Y, RenderSize, RenderSize);
+        IsCollected = false;
     }
 
     public void Render(GameRenderer renderer)
